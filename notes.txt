@@ -1,0 +1,38 @@
+
+uses integer type for chat so that if someone join the room, the chats come from the websocket and http-backend(which stores the previous chat before someone joined the room) gets merged()
+
+make sure use type=module in package.json(esm module) &
+{
+  "extends": "@repo/typescript-config/base.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "rootDir": "./src"
+  },
+  //"include": ["src/**/*.ts"]
+}
+in prisma.schema
+output   = "../src/generated/prisma" so that it allow other apps (http-backend, ws-backend) to import the shared and pre-configured prisma instance 
+Yes, the change in the Prisma client output path is highly relevant to the distinction between CommonJS (CJS) and ECMAScript Modules (ESM), especially when working in modern Node.js monorepos using TypeScript.
+The default configuration of a standard Prisma project often leans towards CommonJS compatibility, but when integrating into a modern TypeScript monorepo using standard import and export statements (ESM syntax), the custom output path is essential for proper module resolution.
+Here is how the output path configuration relates to ESM/CJS:
+The Problem with Default Output and ESM
+By default, the Prisma client is installed in node_modules/@prisma/client.
+In a pure CJS setup, Node.js resolves require('@prisma/client') easily.
+In a modern ESM setup (which you appear to be using, based on the import express from "express"; syntax and file extensions like .js in your error stack traces), Node.js and TypeScript have stricter rules for module resolution:
+TypeScript Aliases: When you import something from a different package in your monorepo, like import { prisma } from "@repo/db";, TypeScript relies on path aliases defined in your tsconfig.json files to locate the source code (usually within the src directory of the shared package).
+ESM Requires Specific Paths: The Node.js ESM loader needs explicit file extensions or exports maps configured in package.json to know exactly which file to load (.js, .mjs).
+How the Custom Output Path Solves This
+When you specify output = "../src/generated/prisma":
+You are moving the generated code into the src directory of your @repo/db package.
+Your tsconfig.json for @repo/db can now use standard paths configuration or exports to include this generated directory when you build your project (tsc -b).
+This makes the Prisma client files part of the standard application source/distributor files, allowing them to be handled correctly by the TypeScript compiler and the Node.js ESM loader (which often requires explicit file extensions in the output dist folder).
+In short:
+Moving the output into src ensures that the generated Prisma client code is compiled and resolved using standard ESM rules defined by your TypeScript configuration, rather than relying on the complex CJS-oriented resolution logic within node_modules.
+
+
+Using a .env file at the root of the repository is not recommended. Instead, we recommend placing your .env files into the packages where they're used.
+This practice more closely models the runtime behavior of your applications since environment variables exist in each application's runtime individually. Additionally, as your monorepo scales, this practice makes it easier to manage each application's environment, preventing environment variable leakage across applications.
+
+
+state management in backend
+websocket is statefull backend

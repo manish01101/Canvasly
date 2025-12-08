@@ -14,13 +14,14 @@
   "license": "ISC",
   "packageManager": "pnpm@10.19.0",
   "dependencies": {
+    "@repo/backend-common": "workspace:*",
     "@types/jsonwebtoken": "^9.0.10",
-    "@types/ws": "^8.18.1",
+    "@repo/db": "workspace:*",
     "jsonwebtoken": "^9.0.3",
-    "ws": "^8.18.3",
-    "@repo/backend-common": "workspace:*"
+    "ws": "^8.18.3"
   },
   "devDependencies": {
-    "@repo/typescript-config": "workspace:*"
+    "@repo/typescript-config": "workspace:*",
+    "@types/ws": "^8.18.1"
   }
 }

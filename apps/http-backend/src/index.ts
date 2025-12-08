@@ -94,6 +94,25 @@ app.post("/room", middleware, async (req, res) => {
   }
 });
 
+app.get("/chats/:roomId", middleware, async (req, res) => {
+  const roomId = req.params.roomId;
+  try {
+    const chats = await prisma.chat.findMany({
+      where: {
+        roomId,
+      },
+      orderBy: {
+        id: "desc",
+      },
+      take: 50,
+    });
+    res.json({ chats });
+  } catch (error) {
+    console.error("Error while fetching room's chats:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+});
+
 app.listen(3000, () => {
   console.log("running http on 3000");
 });
