@@ -4,9 +4,11 @@ import { JWT_SECRET } from "@repo/backend-common/config";
 import { roomSchema, signinSchema, signupSchema } from "@repo/common/types";
 import { prisma } from "@repo/db";
 import { middleware } from "./middleware.js";
+import cors from "cors";
 
 const app = express();
 app.use(express.json());
+app.use(cors());
 
 app.post("/signup", async (req, res) => {
   const parsedBody = signupSchema.safeParse(req.body);
@@ -109,6 +111,21 @@ app.get("/chats/:roomId", middleware, async (req, res) => {
     res.json({ chats });
   } catch (error) {
     console.error("Error while fetching room's chats:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+});
+
+app.get("/room/:name", async (req, res) => {
+  const name = req.params.name;
+  try {
+    const room = await prisma.room.findFirst({
+      where: {
+        name,
+      },
+    });
+    res.json({ room });
+  } catch (error) {
+    console.error("Error while fetching roomId:", error);
     return res.status(500).json({ message: "Internal server error" });
   }
 });
