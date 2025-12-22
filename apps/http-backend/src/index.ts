@@ -114,6 +114,23 @@ app.get("/chats/:roomId", middleware, async (req, res) => {
     return res.status(500).json({ message: "Internal server error" });
   }
 });
+app.get("/shapes/:roomId", middleware, async (req, res) => {
+  const roomId = req.params.roomId;
+  try {
+    const shapes = await prisma.shape.findMany({
+      where: {
+        roomId,
+      },
+      orderBy: {
+        id: "asc",
+      },
+    });
+    res.json({ shapes });
+  } catch (error) {
+    console.error("Error while fetching room's shapes:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+});
 
 app.get("/room/:name", async (req, res) => {
   const name = req.params.name;
@@ -127,6 +144,14 @@ app.get("/room/:name", async (req, res) => {
   } catch (error) {
     console.error("Error while fetching roomId:", error);
     return res.status(500).json({ message: "Internal server error" });
+  }
+});
+
+app.get("/rooms", async (req, res) => {
+  try {
+    const res = await prisma.room.findMany();
+  } catch (error) {
+    console.log(error);
   }
 });
 
