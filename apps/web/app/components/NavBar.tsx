@@ -103,7 +103,7 @@ const NavBar = () => {
       console.log("room is fetched successfully:", res.data);
       setIsJoinRoomOpen(false);
       setRoomName("");
-      console.log("room id:", res.data.room.id)
+      console.log("room id:", res.data.room.id);
       router.push(`/room/${res.data.room.id}`);
     } catch (error) {
       console.log("error while fetching room id: ", error);
@@ -247,7 +247,12 @@ const NavBar = () => {
               {token ? (
                 <span>{name || "Me"}</span>
               ) : (
-                <span onClick={() => router.push("/signin")}>Signin</span>
+                <div className="">
+                  <span className="mr-3" onClick={() => router.push("/signin")}>
+                    Signin
+                  </span>
+                  <span onClick={() => router.push("/signup")}>Signup</span>
+                </div>
               )}
             </span>
             {isMeOpen && token && (

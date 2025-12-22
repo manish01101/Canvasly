@@ -1,16 +1,18 @@
 "use client";
-import React from "react";
+import React, { ReactNode } from "react";
 
 type Type = "primary" | "secondary";
 
 interface Props {
-  onclick: () => Promise<void>;
-  label: string;
-  type: Type;
+  onclick?: () => void | Promise<void>;
+  label?: string;
+  type?: Type;
   disabled?: boolean;
+  children?: ReactNode;
+  className?: string;
 }
 
-const Button = ({ onclick, label, type, disabled }: Props) => {
+const Button = ({ onclick, label, type, disabled, children }: Props) => {
   return (
     <button
       onClick={onclick}
@@ -21,7 +23,7 @@ const Button = ({ onclick, label, type, disabled }: Props) => {
           : "bg-[var(--color-secondary)]"
       }`}
     >
-      {label}
+      {label ? label : children}
     </button>
   );
 };

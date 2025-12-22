@@ -1,36 +1,44 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { WEBSOCKET_URL } from "../config";
-import React from "react";
 
 const useSocket = () => {
-  const socketRef = useRef<WebSocket | null>(null);
+  const [socket, setSocket] = useState<WebSocket | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
-    if (!token) return;
+    // If no token, we cannot connect.
+    // Ideally redirect to login here or handle in UI.
+    if (!token) {
+      setLoading(false);
+      return;
+    }
 
     const ws = new WebSocket(`${WEBSOCKET_URL}?token=${token}`);
-    socketRef.current = ws;
 
     ws.onopen = () => {
       console.log("WS connected");
+      setSocket(ws);
       setLoading(false);
     };
 
-    ws.onerror = (err) => console.error("WebSocket error:", err);
+    ws.onerror = (err) => {
+      console.log("WebSocket error:", err);
+      setLoading(false);
+    };
 
-    ws.onclose = () => console.log("WebSocket closed");
+    ws.onclose = () => {
+      console.log("WebSocket closed");
+      setSocket(null);
+    };
 
+    // Cleanup on unmount
     return () => {
       ws.close();
     };
   }, []);
 
-  return {
-    socket: socketRef.current,
-    loading,
-  };
+  return { socket, loading };
 };
 
 export default useSocket;
