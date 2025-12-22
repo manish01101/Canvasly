@@ -16,6 +16,8 @@ interface User {
 }
 const users = new Map<WebSocket, User>();
 
+/* ---------------- AUTH ---------------- */
+
 const handleAuth = (request: IncomingMessage): string | null => {
   let token: string | null = null;
 
@@ -48,6 +50,8 @@ const handleAuth = (request: IncomingMessage): string | null => {
   }
 };
 
+/* ---------------- CONNECTION ---------------- */
+
 wss.on("connection", (ws, request) => {
   ws.on("error", console.error);
 
@@ -69,6 +73,8 @@ wss.on("connection", (ws, request) => {
   console.log(`User connected: ${userId}`);
   ws.send(JSON.stringify({ type: "welcome", userId }));
 
+  /* ---------------- MESSAGE HANDLER ---------------- */
+
   ws.on("message", async (data) => {
     // console.log(users);
     // TODO: type checking for parsedData
@@ -83,18 +89,21 @@ wss.on("connection", (ws, request) => {
     const currentUser = users.get(ws);
     if (!currentUser) return;
 
+    /* ---------- JOIN ROOM ---------- */
     if (parsedData.type === "join_room") {
       if (typeof parsedData.roomId !== "string") return;
       currentUser.rooms.add(parsedData.roomId);
       console.log(`${currentUser.userId} joined room ${parsedData.roomId}`);
     }
 
+    /* ---------- LEAVE ROOM ---------- */
     if (parsedData.type === "leave_room") {
       if (typeof parsedData.roomId !== "string") return;
       currentUser.rooms.delete(parsedData.roomId);
       console.log(`${currentUser.userId} left room ${parsedData.roomId}`);
     }
 
+    /* ---------- CHAT ---------- */
     if (parsedData.type === "chat") {
       if (typeof parsedData.roomId !== "string") return;
       if (typeof parsedData.message !== "string") return;
@@ -124,6 +133,38 @@ wss.on("connection", (ws, request) => {
           );
         }
       });
+    }
+
+    /* ---------- DRAW ---------- */
+    if (parsedData.type === "draw") {
+      const { roomId, shape } = parsedData;
+
+      if (typeof roomId !== "string" || !shape || !shape.type) return;
+      try {
+        await prisma.shape.create({
+          data: {
+            roomId,
+            userId,
+            type: shape.type,
+            data: shape,
+          },
+        });
+        // broadcast to everyone
+        users.forEach((u) => {
+          if (u.rooms.has(roomId) && u.ws.readyState === WebSocket.OPEN) {
+            u.ws.send(
+              JSON.stringify({
+                type: "draw",
+                shape,
+                from: userId,
+                roomId,
+              })
+            );
+          }
+        });
+      } catch (error) {
+        console.log("Error saving shape to DB:", error);
+      }
     }
   });
 
