@@ -1,11 +1,12 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import axios from "axios";
-import useSocket from "../../../hooks/useSocket";
 import { BACKEND_URL } from "../../../config";
 import { Canvas } from "../../../components/Canvas";
+import useSocket from "../../../hooks/useSocket";
+import { MessageSquare, X, LogOut } from "lucide-react";
 
 interface Chat {
   id: number;
@@ -13,52 +14,56 @@ interface Chat {
   user: { name: string };
 }
 
+// Memoized Canvas prevents re-renders when chat state changes
+const MemoizedCanvas = React.memo(Canvas);
+
 export default function RoomPage() {
   const { socket, loading } = useSocket();
   const params = useParams();
+  const router = useRouter(); // Initialize router
   const roomId = params.id as string;
-
-  const token =
-    typeof window !== "undefined" ? localStorage.getItem("token") : "";
 
   const [chats, setChats] = useState<Chat[]>([]);
   const [initialShapes, setInitialShapes] = useState<any[]>([]);
   const [message, setMessage] = useState("");
-
+  const [isChatOpen, setIsChatOpen] = useState(false);
   const chatBoxRef = useRef<HTMLDivElement | null>(null);
+  const [currentUserName, setCurrentUserName] = useState("");
 
-  // fetch old chats & shapes
   useEffect(() => {
-    const loadChats = async () => {
+    if (typeof window !== "undefined") {
+      setCurrentUserName(localStorage.getItem("name") || "");
+    }
+  }, []);
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
+    const loadData = async () => {
       try {
-        // fetch chats
         const chatRes = await axios.get(`${BACKEND_URL}/chats/${roomId}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
+        setChats(chatRes.data.chats || []);
 
-        const chatArray = Array.isArray(chatRes.data)
-          ? chatRes.data
-          : chatRes.data.chats;
-        setChats(chatArray || []);
-
-        // fetch shapes
         const shapeRes = await axios.get(`${BACKEND_URL}/shapes/${roomId}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
-        const shapeArray = shapeRes.data.shapes.map((s: any) => {
-          return { ...s.data, id: s.id };
-        });
-        // Assuming backend returns { shapes: [...] }
+
+        const shapeArray = shapeRes.data.shapes.map((s: any) => ({
+          ...s.data,
+          id: s.id,
+        }));
         setInitialShapes(shapeArray || []);
       } catch (err) {
         console.error(err);
       }
     };
 
-    loadChats();
-  }, [roomId, token]);
+    loadData();
+  }, [roomId]);
 
-  // websocket join + listen
   useEffect(() => {
     if (!socket || loading) return;
 
@@ -66,12 +71,11 @@ export default function RoomPage() {
 
     const handleMessage = (e: MessageEvent) => {
       const data = JSON.parse(e.data);
-
       if (data.type === "chat") {
         setChats((prev) => [
           ...prev,
           {
-            id: data.id || Date.now(),
+            id: Date.now(),
             message: data.message,
             user: { name: data.from || "Someone" },
           },
@@ -80,79 +84,138 @@ export default function RoomPage() {
     };
 
     socket.addEventListener("message", handleMessage);
-
-    return () => {
-      socket.removeEventListener("message", handleMessage);
-    };
+    return () => socket.removeEventListener("message", handleMessage);
   }, [socket, loading, roomId]);
 
   const sendMessage = () => {
     if (!message || !socket) return;
-
-    socket.send(
-      JSON.stringify({
-        type: "chat",
-        roomId,
-        message,
-      })
-    );
-
+    socket.send(JSON.stringify({ type: "chat", roomId, message }));
     setMessage("");
   };
 
-  // Scroll to bottom of chat
+  const handleLeaveRoom = () => {
+    router.push("/");
+  };
+
+  // Auto scroll when chat updates or opens
   useEffect(() => {
     if (chatBoxRef.current) {
       chatBoxRef.current.scrollTop = chatBoxRef.current.scrollHeight;
     }
-  }, [chats]);
+  }, [chats, isChatOpen]);
 
   return (
-    <div className="flex h-screen w-screen">
-      {/* Canvas */}
-      <div className="flex-1 bg-gray-50 p-5">
-        <div className="border-2 border-gray-300 rounded h-full flex items-center justify-center">
-          {socket ? (
-            <Canvas
-              roomId={roomId}
-              socket={socket}
-              initialShapes={initialShapes}
-            />
-          ) : (
-            "Connecting..."
-          )}
-        </div>
+    <div className="flex h-screen w-screen bg-black text-white overflow-hidden relative">
+      {/* --- TOP RIGHT CONTROLS --- */}
+      <div className="fixed top-4 right-4 z-50 flex gap-4">
+        {/* Chat Toggle Button */}
+        <button
+          onClick={() => setIsChatOpen(!isChatOpen)}
+          className={`p-3 rounded-full shadow-xl border transition-all text-white flex items-center justify-center ${
+            isChatOpen
+              ? "bg-blue-600 border-blue-400"
+              : "bg-gray-800 hover:bg-gray-700 border-gray-600"
+          }`}
+          title="Chat"
+        >
+          {isChatOpen ? <X size={20} /> : <MessageSquare size={20} />}
+        </button>
+
+        {/* Leave Room Button */}
+        <button
+          onClick={handleLeaveRoom}
+          className="bg-gray-800 hover:bg-red-600 p-3 rounded-full shadow-xl border border-gray-600 hover:border-red-500 transition-all text-white flex items-center justify-center"
+          title="Leave Room"
+        >
+          <LogOut size={20} />
+        </button>
       </div>
 
-      {/* Chat */}
-      <div className="w-80 border-l border-gray-200 flex flex-col bg-white">
-        <div className="p-4 font-bold border-b">Chat Room</div>
+      {/* --- CANVAS --- */}
+      <div className="flex-1 relative bg-black h-full w-full">
+        {!loading && socket ? (
+          <MemoizedCanvas
+            roomId={roomId}
+            socket={socket}
+            initialShapes={initialShapes}
+          />
+        ) : (
+          <div className="h-full flex items-center justify-center text-gray-400 animate-pulse">
+            Initializing Canvas...
+          </div>
+        )}
+      </div>
 
-        <div ref={chatBoxRef} className="flex-1 overflow-y-auto p-4 space-y-2">
-          {chats.map((c) => (
-            <div key={c.id} className="p-2 rounded bg-gray-100">
-              <span className="font-semibold">
-                {c.user?.name || "Unknown"}:
-              </span>{" "}
-              {c.message}
-            </div>
-          ))}
+      {/* --- CHAT SIDEBAR --- */}
+      <div
+        className={`fixed right-0 top-0 h-full w-80 bg-gray-900 border-l border-gray-800 shadow-2xl transition-transform duration-300 ease-in-out z-40 flex flex-col ${
+          isChatOpen ? "translate-x-0" : "translate-x-full"
+        }`}
+      >
+        <div className="p-4 border-b border-gray-800 flex items-center gap-2 mt-16">
+          {" "}
+          {/* Increased mt for spacing */}
+          <div className="w-2 h-2 rounded-full bg-green-500"></div>
+          <span className="font-semibold text-gray-200">Live Chat</span>
         </div>
 
-        <div className="p-4 border-t flex gap-2">
-          <input
-            className="flex-1 border rounded px-3 py-2"
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && sendMessage()}
-            placeholder="Type a message..."
-          />
-          <button
-            className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
-            onClick={sendMessage}
-          >
-            Send
-          </button>
+        <div
+          ref={chatBoxRef}
+          className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-thin scrollbar-thumb-gray-700"
+        >
+          {chats.map((c) => {
+            const isMe = c.user?.name === currentUserName;
+            return (
+              <div
+                key={c.id}
+                className={`flex flex-col ${isMe ? "items-end" : "items-start"}`}
+              >
+                <span className="text-xs text-gray-500 mb-1 px-1">
+                  {isMe ? "You" : c.user?.name}
+                </span>
+                <div
+                  className={`px-3 py-2 rounded-2xl text-sm max-w-[90%] break-words ${
+                    isMe
+                      ? "bg-blue-600 text-white rounded-br-none"
+                      : "bg-gray-800 text-gray-200 rounded-bl-none"
+                  }`}
+                >
+                  {c.message}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="p-4 border-t border-gray-800 bg-gray-900">
+          <div className="flex gap-2 bg-gray-800 p-1 rounded-lg border border-gray-700 focus-within:border-blue-500 transition-colors">
+            <input
+              className="flex-1 bg-transparent border-none text-sm px-3 py-2 text-white placeholder-gray-500 focus:outline-none"
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && sendMessage()}
+              placeholder="Type a message..."
+            />
+            <button
+              className="bg-blue-600 p-2 rounded-md hover:bg-blue-500 transition text-white"
+              onClick={sendMessage}
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth={1.5}
+                stroke="currentColor"
+                className="size-4"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M6 12 3.269 3.125A59.769 59.769 0 0 1 21.485 12 59.768 59.768 0 0 1 3.27 20.875L5.999 12Zm0 0h7.5"
+                />
+              </svg>
+            </button>
+          </div>
         </div>
       </div>
     </div>

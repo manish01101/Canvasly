@@ -22,10 +22,8 @@ export function Canvas({
 
   useEffect(() => {
     if (!canvasRef.current) return;
-
     const g = new Game(canvasRef.current, roomId, socket, initialShapes);
     setGame(g);
-
     return () => g.destroy();
   }, [roomId, socket, initialShapes]);
 
@@ -34,30 +32,33 @@ export function Canvas({
   }, [tool, game]);
 
   return (
-    <div className="relative w-full h-full">
+    <div className="relative w-full h-full overflow-hidden">
       <canvas
         ref={canvasRef}
         width={window.innerWidth}
         height={window.innerHeight}
-        className="block bg-black"
+        className="block bg-black touch-none"
       />
 
-      <div className="fixed top-4 left-4 flex gap-2 bg-gray-900 p-2 rounded">
-        <IconButton
-          activated={tool === "pencil"}
-          onClick={() => setTool("pencil")}
-          icon={<Pencil />}
-        />
-        <IconButton
-          activated={tool === "rect"}
-          onClick={() => setTool("rect")}
-          icon={<RectangleHorizontalIcon />}
-        />
-        <IconButton
-          activated={tool === "circle"}
-          onClick={() => setTool("circle")}
-          icon={<Circle />}
-        />
+      {/* Floating Toolbar - Top Center */}
+      <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50">
+        <div className="flex gap-3 bg-gray-900/90 backdrop-blur-sm border border-gray-700 px-4 py-2 rounded-full shadow-xl">
+          <IconButton
+            activated={tool === "pencil"}
+            onClick={() => setTool("pencil")}
+            icon={<Pencil className="w-5 h-5" />}
+          />
+          <IconButton
+            activated={tool === "rect"}
+            onClick={() => setTool("rect")}
+            icon={<RectangleHorizontalIcon className="w-5 h-5" />}
+          />
+          <IconButton
+            activated={tool === "circle"}
+            onClick={() => setTool("circle")}
+            icon={<Circle className="w-5 h-5" />}
+          />
+        </div>
       </div>
     </div>
   );

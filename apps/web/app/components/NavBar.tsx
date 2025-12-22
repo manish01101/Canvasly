@@ -5,6 +5,7 @@ import Button from "./Button";
 import axios from "axios";
 import { BACKEND_URL } from "../config";
 import { useRouter } from "next/navigation";
+import Logo from "./Logo";
 
 const NavBar = () => {
   const [isCreateRoomOpen, setIsCreateRoomOpen] = useState(false);
@@ -122,7 +123,7 @@ const NavBar = () => {
   return (
     <>
       <div className="bg-[var(--color-tertiary)] px-8 py-3 shadow-xl sticky flex justify-between">
-        <span className="font-bold text-xl">Canvasly</span>
+        <Logo />
         <div className="flex justify-between items-center gap-8 font-semibold">
           {/* create room  */}
           <div className="relative">
