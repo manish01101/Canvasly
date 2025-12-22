@@ -27,6 +27,7 @@ model User {
   photo    String?
   room     Room[]
   chat     Chat[]
+  shape    Shape[]
 }
 
 model Room {
@@ -36,13 +37,31 @@ model Room {
   adminId   String
   admin     User     @relation(fields: [adminId], references: [id])
   chat      Chat[]
+  shape     Shape[]
 }
 
 model Chat {
   id      Int    @id @default(autoincrement())
   message String
   roomId  String
-  room    Room   @relation(fields: [roomId], references: [id])
+  room    Room   @relation(fields: [roomId], references: [id], onDelete: Cascade)
   userId  String
-  user    User   @relation(fields: [userId], references: [id])
+  user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Shape {
+  id        Int       @id @default(autoincrement())
+  type      ShapeType
+  data      Json      // for coordinates
+  roomId    String
+  room      Room      @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime  @default(now())
+}
+
+enum ShapeType {
+  rect
+  circle
+  pencil
 }
