@@ -3,11 +3,14 @@ import jwt, { JwtPayload } from "jsonwebtoken";
 import { JWT_SECRET } from "@repo/backend-common/config";
 import { IncomingMessage } from "http";
 import { prisma } from "@repo/db";
+import "dotenv/config";
 
-const wss = new WebSocketServer({ port: 8080 });
+const PORT = process.env.PORT || 8080;
+
+const wss = new WebSocketServer({ port: Number(PORT) });
 
 console.log(JWT_SECRET);
-console.log("server is on");
+console.log("server is on port: ", PORT);
 
 interface User {
   ws: WebSocket;

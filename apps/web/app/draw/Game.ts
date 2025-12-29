@@ -20,7 +20,6 @@ export class Game {
   ) {
     this.canvas = canvas;
     this.ctx = canvas.getContext("2d")!;
-    // Ensure we don't crash if shapes are null
     this.shapes = initialShapes || [];
 
     this.bindMouse();
@@ -98,7 +97,7 @@ export class Game {
     if (this.tool === "pencil") {
       this.pencilPoints.push({ x, y });
 
-      // Optimization: You could just draw the new line segment here
+      // Optimization: just draw the new line segment here
       // instead of redrawing everything, but redraw is safer for syncing.
       this.redraw();
 

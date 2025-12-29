@@ -5,6 +5,10 @@ import { roomSchema, signinSchema, signupSchema } from "@repo/common/types";
 import { prisma } from "@repo/db";
 import { middleware } from "./middleware.js";
 import cors from "cors";
+import "dotenv/config";
+
+const PORT = process.env.PORT || 8000;
+console.log(PORT);
 
 const app = express();
 app.use(express.json());
@@ -36,7 +40,7 @@ app.post("/signup", async (req, res) => {
       JWT_SECRET,
       { expiresIn: "24h" }
     );
-    return res.status(201).json({ token });
+    return res.status(201).json({ token, name: newUser.name });
   } catch (error) {
     console.error("Signup error:", error);
     return res.status(500).json({ message: "Internal server error" });
@@ -59,7 +63,7 @@ app.post("/signin", async (req, res) => {
     const token = jwt.sign({ userId: user.id, email: user.email }, JWT_SECRET, {
       expiresIn: "24h",
     });
-    return res.json({ token });
+    return res.json({ token, name: user.name });
   } catch (error) {
     console.error("Signin error:", error);
     return res.status(500).json({ message: "Internal server error" });
@@ -155,6 +159,6 @@ app.get("/rooms", async (req, res) => {
   }
 });
 
-app.listen(3000, () => {
-  console.log("running http on 3000");
+app.listen(PORT, () => {
+  console.log(`running http on ${PORT}`);
 });

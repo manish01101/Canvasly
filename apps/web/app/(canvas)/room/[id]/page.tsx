@@ -20,7 +20,7 @@ const MemoizedCanvas = React.memo(Canvas);
 export default function RoomPage() {
   const { socket, loading } = useSocket();
   const params = useParams();
-  const router = useRouter(); // Initialize router
+  const router = useRouter();
   const roomId = params.id as string;
 
   const [chats, setChats] = useState<Chat[]>([]);
@@ -29,6 +29,7 @@ export default function RoomPage() {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const chatBoxRef = useRef<HTMLDivElement | null>(null);
   const [currentUserName, setCurrentUserName] = useState("");
+  const [timeoutError, setTimeoutError] = useState(false);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -104,6 +105,16 @@ export default function RoomPage() {
     }
   }, [chats, isChatOpen]);
 
+  // for loading
+  useEffect(() => {
+    if (loading && !socket) {
+      const timer = setTimeout(() => {
+        setTimeoutError(true);
+      }, 10000);
+      return () => clearTimeout(timer);
+    }
+  }, [loading, socket]);
+
   return (
     <div className="flex h-screen w-screen bg-black text-white overflow-hidden relative">
       {/* --- TOP RIGHT CONTROLS --- */}
@@ -139,7 +150,19 @@ export default function RoomPage() {
             socket={socket}
             initialShapes={initialShapes}
           />
+        ) : timeoutError ? (
+          // TIMEOUT UI
+          <div className="h-full flex flex-col items-center justify-center text-red-400 gap-4">
+            <p>Connection timed out.</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="px-4 py-2 bg-white text-black rounded"
+            >
+              Retry
+            </button>
+          </div>
         ) : (
+          // LOADING UI
           <div className="h-full flex items-center justify-center text-gray-400 animate-pulse">
             Initializing Canvas...
           </div>

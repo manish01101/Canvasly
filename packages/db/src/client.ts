@@ -4,20 +4,22 @@ import pg from "pg";
 import { PrismaClient } from "./generated/prisma/client.js";
 import { PrismaPg } from "@prisma/adapter-pg";
 
-// Capture the result of the configuration attempt
-const dotenvResult = dotenv.config({
-  path: path.resolve(process.cwd(), "../../packages/db/.env"),
-});
-
 // --- DEBUGGING ---
-if (dotenvResult.error) {
-  throw dotenvResult.error;
-}
-if (dotenvResult.parsed && dotenvResult.parsed.DATABASE_URL) {
-  console.log("Successfully parsed DATABASE_URL from file.");
-  process.env.DATABASE_URL = dotenvResult.parsed.DATABASE_URL;
+if (!process.env.DATABASE_URL) {
+  // Capture the result of the configuration attempt
+  const dotenvResult = dotenv.config({
+    path: path.resolve(process.cwd(), "../../packages/db/.env"),
+  });
+
+  if (dotenvResult.error) {
+    console.warn(
+      "Could not load .env file. Relying on system environment variables."
+    );
+  } else {
+    console.log("Loaded environment variables from file.");
+  }
 } else {
-  console.log("DATABASE_URL was not found in the parsed .env file content.");
+  console.log("Using pre-existing DATABASE_URL from environment.");
 }
 console.log("DATABASE_URL:", process.env.DATABASE_URL);
 // --- END DEBUGGING ---

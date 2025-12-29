@@ -4,7 +4,7 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "dev": "next dev --port 3001",
+    "dev": "next dev --port 3000",
     "build": "next build",
     "start": "next start",
     "lint": "eslint --max-warnings 0",
@@ -15,9 +15,9 @@
     "axios": "^1.13.2",
     "framer-motion": "^12.23.26",
     "lucide-react": "^0.561.0",
-    "next": "^16.0.7",
-    "react": "^19.2.0",
-    "react-dom": "^19.1.0"
+    "next": "^16.1.1",
+    "react": "^19.2.3",
+    "react-dom": "^19.2.3"
   },
   "devDependencies": {
     "@next/eslint-plugin-next": "^15.4.6",

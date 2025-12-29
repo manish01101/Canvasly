@@ -15,13 +15,15 @@
   "packageManager": "pnpm@10.19.0",
   "dependencies": {
     "@repo/backend-common": "workspace:*",
-    "@types/jsonwebtoken": "^9.0.10",
     "@repo/db": "workspace:*",
+    "@types/jsonwebtoken": "^9.0.10",
+    "dotenv": "^17.2.3",
     "jsonwebtoken": "^9.0.3",
     "ws": "^8.18.3"
   },
   "devDependencies": {
     "@repo/typescript-config": "workspace:*",
-    "@types/ws": "^8.18.1"
+    "@types/ws": "^8.18.1",
+    "typescript": "^5.5.3"
   }
 }

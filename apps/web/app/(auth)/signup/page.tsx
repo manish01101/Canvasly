@@ -24,6 +24,7 @@ const Signup = () => {
       });
       console.log(res.data);
       localStorage.setItem("token", res.data.token);
+      localStorage.setItem("name", res.data.name);
       router.push("/");
     } catch (error) {
       console.log(error);
@@ -52,6 +53,11 @@ const Signup = () => {
           type="password"
           placeholder="password"
           onchange={(e) => setPassword(e.target.value)}
+          onkeydown={(e) => {
+            if (e.key === "Enter") {
+              handleOnclick();
+            }
+          }}
         ></InputBox>
         <Button
           type="primary"

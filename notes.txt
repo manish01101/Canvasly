@@ -36,3 +36,48 @@ This practice more closely models the runtime behavior of your applications sinc
 
 state management in backend
 websocket is statefull backend
+
+standard browser WebSocket API does not support custom headers (like Authorization: Bearer ...). This is a known limitation of the browser API.
+connect without the token, and the very first message you send is the token. The server waits for this message before allowing any other actions.
+if you want a flexible, robust system. This is what most production apps (like Slack or Discord clones) use for WebSockets because it handles large tokens and reconnection logic gracefully.
+--- client side ---
+const ws = new WebSocket(WEBSOCKET_URL);
+
+ws.onopen = () => {
+  // Send the token immediately upon connection
+  ws.send(JSON.stringify({
+    type: 'auth',
+    token: token
+  }));
+};
+--- server side ---
+wss.on('connection', (ws) => {
+  let isAuthenticated = false;
+
+  ws.on('message', (message) => {
+    const data = JSON.parse(message.toString());
+
+    // 1. If not authenticated, the FIRST message MUST be auth
+    if (!isAuthenticated) {
+      if (data.type === 'auth' && data.token) {
+        try {
+          // Verify Token
+          const user = jwt.verify(data.token, SECRET);
+          isAuthenticated = true;
+          console.log("User authenticated");
+          return;
+        } catch (e) {
+          ws.close(); // Kill connection if auth fails
+        }
+      } else {
+        ws.close(); // Kill if first message wasn't auth
+        return;
+      }
+    }
+
+    // 2. Normal logic (only runs if isAuthenticated is true)
+    if (data.type === 'join_room') {
+      // ...
+    }
+  });
+});

@@ -17,7 +17,10 @@
     "@types/node": "^22.18.12",
     "dotenv": "^17.2.3"
   },
+  "devDependencies": {
+    "typescript": "^5.5.3"
+  },
   "exports": {
-    "./config": "./src/index.ts"
+    "./config": "./dist/index.js"
   }
 }

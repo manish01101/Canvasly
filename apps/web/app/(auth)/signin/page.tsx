@@ -30,6 +30,7 @@ const Signin = () => {
       });
       console.log(res.data);
       localStorage.setItem("token", res.data.token);
+      localStorage.setItem("name", res.data.name);
       // window.dispatchEvent(new Event("storage"));  // notify NavBar, for multiple tabs update
       router.push("/");
     } catch (error) {
@@ -54,6 +55,11 @@ const Signin = () => {
           type="password"
           placeholder="password"
           onchange={(e) => setPassword(e.target.value)}
+          onkeydown={(e) => {
+            if (e.key === "Enter") {
+              handleOnclick();
+            }
+          }}
         ></InputBox>
         <Button
           type="primary"
