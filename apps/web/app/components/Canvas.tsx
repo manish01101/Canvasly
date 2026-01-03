@@ -2,10 +2,10 @@
 
 import { useEffect, useRef, useState } from "react";
 import { IconButton } from "./IconButton";
-import { Pencil, Circle, RectangleHorizontalIcon } from "lucide-react";
+import { Pencil, Circle, RectangleHorizontalIcon, Eraser } from "lucide-react";
 import { Game } from "../draw";
 
-export type Tool = "rect" | "circle" | "pencil";
+export type Tool = "rect" | "circle" | "pencil" | "eraser";
 
 export function Canvas({
   roomId,
@@ -57,6 +57,11 @@ export function Canvas({
             activated={tool === "circle"}
             onClick={() => setTool("circle")}
             icon={<Circle className="w-5 h-5" />}
+          />
+          <IconButton
+            activated={tool === "eraser"}
+            onClick={() => setTool("eraser")}
+            icon={<Eraser className="w-5 h-5" />}
           />
         </div>
       </div>

@@ -64,4 +64,5 @@ enum ShapeType {
   rect
   circle
   pencil
+  eraser
 }

@@ -10,7 +10,8 @@ export class Game {
   private drawing = false;
   private startX = 0;
   private startY = 0;
-  private pencilPoints: Point[] = [];
+  // private pencilPoints: Point[] = [];
+  private currentPoints: Point[] = [];
 
   constructor(
     canvas: HTMLCanvasElement,
@@ -48,8 +49,11 @@ export class Game {
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
     this.ctx.fillStyle = "black";
     this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-    this.ctx.strokeStyle = "white";
-    this.ctx.lineWidth = 2;
+
+    // stroke style
+    // this.ctx.strokeStyle = "white";
+    // this.ctx.lineWidth = 2;
+    // this.ctx.lineCap = "round"; // Makes lines smoother
 
     for (const s of this.shapes) {
       if (s.type === "rect") {
@@ -58,8 +62,16 @@ export class Game {
         this.ctx.beginPath();
         this.ctx.arc(s.centerX, s.centerY, s.radius, 0, Math.PI * 2);
         this.ctx.stroke();
-      } else if (s.type === "pencil") {
+      } else if (s.type === "pencil" || s.type === "eraser") {
         this.ctx.beginPath();
+        // ----- eraser logic ------
+        if (s.type === "eraser") {
+          this.ctx.strokeStyle = "black"; // paint with background color
+          this.ctx.lineWidth = 15; // thicker stroke for eraser
+        } else {
+          this.ctx.strokeStyle = "white";
+          this.ctx.lineWidth = 2;
+        }
         if (s.points && s.points.length > 0 && s.points[0]) {
           this.ctx.moveTo(s.points[0].x, s.points[0].y);
           s.points.forEach((p) => this.ctx.lineTo(p.x, p.y));
@@ -85,8 +97,8 @@ export class Game {
     this.startX = x;
     this.startY = y;
 
-    if (this.tool === "pencil") {
-      this.pencilPoints = [{ x, y }];
+    if (this.tool === "pencil" || this.tool === "eraser") {
+      this.currentPoints = [{ x, y }];
     }
   };
 
@@ -94,8 +106,8 @@ export class Game {
     if (!this.drawing) return;
     const { x, y } = this.getPos(e);
 
-    if (this.tool === "pencil") {
-      this.pencilPoints.push({ x, y });
+    if (this.tool === "pencil" || this.tool === "eraser") {
+      this.currentPoints.push({ x, y });
 
       // Optimization: just draw the new line segment here
       // instead of redrawing everything, but redraw is safer for syncing.
@@ -103,10 +115,18 @@ export class Game {
 
       // Draw the CURRENT stroke live
       this.ctx.beginPath();
-      if (this.pencilPoints[0]) {
-        this.ctx.moveTo(this.pencilPoints[0].x, this.pencilPoints[0].y);
+
+      if (this.tool === "eraser") {
+        this.ctx.strokeStyle = "black";
+        this.ctx.lineWidth = 15;
+      } else {
+        this.ctx.strokeStyle = "white";
+        this.ctx.lineWidth = 2;
       }
-      this.pencilPoints.forEach((p) => this.ctx.lineTo(p.x, p.y));
+      if (this.currentPoints[0]) {
+        this.ctx.moveTo(this.currentPoints[0].x, this.currentPoints[0].y);
+      }
+      this.currentPoints.forEach((p) => this.ctx.lineTo(p.x, p.y));
       this.ctx.stroke();
       return;
     }
@@ -115,6 +135,9 @@ export class Game {
     const h = y - this.startY;
 
     this.redraw(); // Clear and draw old shapes
+
+    this.ctx.strokeStyle = "white"; // Reset style for previews
+    this.ctx.lineWidth = 2;
 
     // Draw preview of current shape
     if (this.tool === "rect") {
@@ -140,7 +163,9 @@ export class Game {
     let shape: Shape | null = null;
 
     if (this.tool === "pencil") {
-      shape = { type: "pencil", points: [...this.pencilPoints] };
+      shape = { type: "pencil", points: [...this.currentPoints] };
+    } else if (this.tool === "eraser") {
+      shape = { type: "eraser", points: [...this.currentPoints] };
     } else if (this.tool === "rect") {
       shape = {
         type: "rect",

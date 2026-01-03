@@ -17,4 +17,8 @@ export type Shape =
   | {
       type: "pencil";
       points: Point[];
+    }
+  | {
+      type: "eraser";
+      points: Point[];
     };
