@@ -50,7 +50,7 @@ model Chat {
 }
 
 model Shape {
-  id        Int       @id @default(autoincrement())
+  id        String       @id 
   type      ShapeType
   data      Json      // for coordinates
   roomId    String

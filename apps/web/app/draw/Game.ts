@@ -1,5 +1,5 @@
-import { Tool } from "../components/Canvas";
-import { Point, Shape } from "./types";
+import { Point, Shape, Tool } from "./types";
+import { isPointInShape } from "./utils";
 
 export class Game {
   private canvas: HTMLCanvasElement;
@@ -12,6 +12,7 @@ export class Game {
   private startY = 0;
   // private pencilPoints: Point[] = [];
   private currentPoints: Point[] = [];
+  private socketHandler: (e: MessageEvent) => void;
 
   constructor(
     canvas: HTMLCanvasElement,
@@ -22,9 +23,9 @@ export class Game {
     this.canvas = canvas;
     this.ctx = canvas.getContext("2d")!;
     this.shapes = initialShapes || [];
-
+    this.socketHandler = this.handleSocketMessage.bind(this);
     this.bindMouse();
-    this.listenSocket();
+    this.initSocket();
 
     // Initial draw
     requestAnimationFrame(() => this.redraw());
@@ -34,15 +35,43 @@ export class Game {
     this.tool = tool;
   }
 
+  private handleSocketMessage(e: MessageEvent) {
+    const data = JSON.parse(e.data);
+
+    if (data.type === "draw" && data.shape) {
+      const exists = this.shapes.some((s) => s.id === data.shape.id);
+      if (!exists) {
+        this.shapes.push(data.shape);
+        this.redraw();
+      }
+    }
+
+    if (data.type === "delete_shape") {
+      this.shapes = this.shapes.filter((s) => s.id !== data.shapeId);
+      this.redraw();
+    }
+  }
+  private initSocket() {
+    this.socket.addEventListener("message", this.socketHandler);
+  }
+
   destroy() {
     this.canvas.removeEventListener("mousedown", this.onDown);
     this.canvas.removeEventListener("mousemove", this.onMove);
     this.canvas.removeEventListener("mouseup", this.onUp);
+    this.socket.removeEventListener("message", this.socketHandler);
   }
 
   private getPos(e: MouseEvent) {
     const rect = this.canvas.getBoundingClientRect();
-    return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+
+    const scaleX = this.canvas.width / rect.width;
+    const scaleY = this.canvas.height / rect.height;
+
+    return {
+      x: (e.clientX - rect.left) * scaleX,
+      y: (e.clientY - rect.top) * scaleY,
+    };
   }
 
   private redraw() {
@@ -50,24 +79,31 @@ export class Game {
     this.ctx.fillStyle = "black";
     this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
-    // stroke style
-    // this.ctx.strokeStyle = "white";
-    // this.ctx.lineWidth = 2;
-    // this.ctx.lineCap = "round"; // Makes lines smoother
-
     for (const s of this.shapes) {
       if (s.type === "rect") {
-        this.ctx.strokeRect(s.x, s.y, s.width, s.height);
+        this.ctx.strokeStyle = "white";
+        this.ctx.lineWidth = 2;
+        this.ctx.strokeRect(s.x ?? 0, s.y ?? 0, s.width ?? 0, s.height ?? 0);
       } else if (s.type === "circle") {
+        this.ctx.strokeStyle = "white";
+        this.ctx.lineWidth = 2;
         this.ctx.beginPath();
-        this.ctx.arc(s.centerX, s.centerY, s.radius, 0, Math.PI * 2);
+        this.ctx.arc(
+          s.centerX ?? 0,
+          s.centerY ?? 0,
+          s.radius ?? 0,
+          0,
+          Math.PI * 2
+        );
         this.ctx.stroke();
-      } else if (s.type === "pencil" || s.type === "eraser") {
+      }
+
+      // Logic for Pencil/Eraser
+      else if (s.type === "pencil" || s.type === "eraser") {
         this.ctx.beginPath();
-        // ----- eraser logic ------
         if (s.type === "eraser") {
-          this.ctx.strokeStyle = "black"; // paint with background color
-          this.ctx.lineWidth = 15; // thicker stroke for eraser
+          this.ctx.strokeStyle = "black";
+          this.ctx.lineWidth = 15;
         } else {
           this.ctx.strokeStyle = "white";
           this.ctx.lineWidth = 2;
@@ -81,21 +117,33 @@ export class Game {
     }
   }
 
-  private listenSocket() {
-    this.socket.addEventListener("message", (e) => {
-      const data = JSON.parse(e.data);
-      if (data.type === "draw" && data.shape) {
-        this.shapes.push(data.shape);
-        this.redraw();
-      }
-    });
-  }
-
   private onDown = (e: MouseEvent) => {
     this.drawing = true;
     const { x, y } = this.getPos(e);
     this.startX = x;
     this.startY = y;
+
+    if (this.tool === "delete") {
+      // Find top-most shape clicked
+      const clickedShape = [...this.shapes]
+        .reverse()
+        .find((s) => isPointInShape(s, x, y));
+
+      if (clickedShape) {
+        // remove shapes locally
+        this.shapes = this.shapes.filter((s) => s.id !== clickedShape.id);
+        this.redraw();
+        // tell backend to delete it
+        this.socket.send(
+          JSON.stringify({
+            type: "delete_shape",
+            roomId: this.roomId,
+            shapeId: clickedShape.id,
+          })
+        );
+      }
+      return;
+    }
 
     if (this.tool === "pencil" || this.tool === "eraser") {
       this.currentPoints = [{ x, y }];
@@ -104,6 +152,7 @@ export class Game {
 
   private onMove = (e: MouseEvent) => {
     if (!this.drawing) return;
+    if (this.tool === "delete") return;
     const { x, y } = this.getPos(e);
 
     if (this.tool === "pencil" || this.tool === "eraser") {
@@ -156,27 +205,32 @@ export class Game {
     if (!this.drawing) return;
     this.drawing = false;
 
+    if (this.tool === "delete") return;
+
     const { x, y } = this.getPos(e);
     const w = x - this.startX;
     const h = y - this.startY;
 
     let shape: Shape | null = null;
+    const shapeId = crypto.randomUUID();
 
     if (this.tool === "pencil") {
-      shape = { type: "pencil", points: [...this.currentPoints] };
+      shape = { id: shapeId, type: "pencil", points: [...this.currentPoints] };
     } else if (this.tool === "eraser") {
-      shape = { type: "eraser", points: [...this.currentPoints] };
+      shape = { id: shapeId, type: "eraser", points: [...this.currentPoints] };
     } else if (this.tool === "rect") {
       shape = {
+        id: shapeId,
         type: "rect",
-        x: this.startX,
-        y: this.startY,
-        width: w,
-        height: h,
+        x: w < 0 ? x : this.startX, // If dragged left, new X is current mouse pos
+        y: h < 0 ? y : this.startY, // If dragged up, new Y is current mouse pos
+        width: Math.abs(w), // Always positive
+        height: Math.abs(h),
       };
     } else if (this.tool === "circle") {
       const r = Math.max(Math.abs(w), Math.abs(h)) / 2;
       shape = {
+        id: shapeId,
         type: "circle",
         radius: r,
         centerX: this.startX + w / 2,

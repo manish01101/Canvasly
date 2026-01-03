@@ -1,6 +1,7 @@
 import { WebSocketServer, WebSocket } from "ws";
 import jwt, { JwtPayload } from "jsonwebtoken";
 import { JWT_SECRET } from "@repo/backend-common/config";
+import { DeleteShapeSchema, CreateShapeSchema } from "@repo/common/types";
 import { IncomingMessage } from "http";
 import { prisma } from "@repo/db";
 import "dotenv/config";
@@ -113,16 +114,26 @@ wss.on("connection", (ws, request) => {
 
       const { roomId, message } = parsedData;
       // best way to use msg queue
-      await prisma.chat.create({
-        data: {
-          roomId,
-          message,
-          userId,
-        },
-      });
+      // await prisma.chat.create({
+      //   data: {
+      //     roomId,
+      //     message,
+      //     userId,
+      //   },
+      // });
+
+      // 1. Save to DB asynchronously (don't block broadcast)
+      prisma.chat
+        .create({
+          data: { roomId, message, userId },
+        })
+        .catch((e) => console.error("Chat DB Error:", e));
+
       console.log(
         `CHAT from ${currentUser.userId} to room ${roomId}: ${parsedData.message}`
       );
+
+      // 2. then broadcast immediately
       users.forEach((user) => {
         // only send if user are in the room AND the connection is open
         if (user.rooms.has(roomId) && user.ws.readyState === WebSocket.OPEN) {
@@ -140,9 +151,29 @@ wss.on("connection", (ws, request) => {
 
     /* ---------- DRAW ---------- */
     if (parsedData.type === "draw") {
-      const { roomId, shape } = parsedData;
+      const resParsedData = CreateShapeSchema.safeParse(parsedData);
+      if (!resParsedData.success) {
+        console.error("Invalid shape data", resParsedData.error);
+        return;
+      }
+      const { roomId, shape } = resParsedData.data;
 
       if (typeof roomId !== "string" || !shape || !shape.type) return;
+
+      // 1.broadcast to everyone immediately (low latency)
+      users.forEach((u) => {
+        if (u.rooms.has(roomId) && u.ws.readyState === WebSocket.OPEN) {
+          u.ws.send(
+            JSON.stringify({
+              type: "draw",
+              shape,
+              from: userId,
+              roomId,
+            })
+          );
+        }
+      });
+      // 2.save to db
       try {
         await prisma.shape.create({
           data: {
@@ -152,22 +183,41 @@ wss.on("connection", (ws, request) => {
             data: shape,
           },
         });
-        // broadcast to everyone
-        users.forEach((u) => {
-          if (u.rooms.has(roomId) && u.ws.readyState === WebSocket.OPEN) {
-            u.ws.send(
-              JSON.stringify({
-                type: "draw",
-                shape,
-                from: userId,
-                roomId,
-              })
-            );
-          }
-        });
       } catch (error) {
         console.log("Error saving shape to DB:", error);
       }
+    }
+
+    /* ---------- DELETE ---------- */
+    if (parsedData.type === "delete_shape") {
+      const resParsedData = DeleteShapeSchema.safeParse(parsedData);
+      if (!resParsedData.success) {
+        console.log("Invalid delete payload");
+        return;
+      }
+
+      const { shapeId, roomId } = resParsedData.data;
+      // 1. delete from db
+      try {
+        await prisma.shape.delete({
+          where: { id: shapeId },
+        });
+      } catch (error) {
+        console.log("DB Delete Error (likely already deleted):", error);
+      }
+
+      // 2.broadcast to everyone
+      users.forEach((u) => {
+        if (u.rooms.has(roomId) && u.ws.readyState === WebSocket.OPEN) {
+          u.ws.send(
+            JSON.stringify({
+              type: "delete_shape",
+              shapeId: shapeId,
+              roomId: roomId,
+            })
+          );
+        }
+      });
     }
   });
 

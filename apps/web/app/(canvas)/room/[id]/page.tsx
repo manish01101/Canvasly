@@ -52,10 +52,25 @@ export default function RoomPage() {
           headers: { Authorization: `Bearer ${token}` },
         });
 
-        const shapeArray = shapeRes.data.shapes.map((s: any) => ({
-          ...s.data,
-          id: s.id,
-        }));
+        const shapeArray = shapeRes.data.shapes.map((s: any) => {
+          // 1. handle if data is wrapped in a 'data' field or flattened
+          const shapeData = s.data || s;
+
+          // 2. parse points if they are a string
+          if (shapeData.points && typeof shapeData.points === "string") {
+            try {
+              shapeData.points = JSON.parse(shapeData.points);
+            } catch (e) {
+              console.error("Failed to parse points:", e);
+              shapeData.points = [];
+            }
+          }
+
+          return {
+            ...shapeData,
+            id: s.id,
+          };
+        });
         setInitialShapes(shapeArray || []);
       } catch (err) {
         console.error(err);

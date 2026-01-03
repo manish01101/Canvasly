@@ -2,10 +2,14 @@
 
 import { useEffect, useRef, useState } from "react";
 import { IconButton } from "./IconButton";
-import { Pencil, Circle, RectangleHorizontalIcon, Eraser } from "lucide-react";
-import { Game } from "../draw";
-
-export type Tool = "rect" | "circle" | "pencil" | "eraser";
+import {
+  Pencil,
+  Circle,
+  RectangleHorizontalIcon,
+  Eraser,
+  Trash2,
+} from "lucide-react";
+import { Game, Tool } from "../draw";
 
 export function Canvas({
   roomId,
@@ -37,7 +41,9 @@ export function Canvas({
         ref={canvasRef}
         width={window.innerWidth}
         height={window.innerHeight}
-        className="block bg-black touch-none"
+        className={`block bg-black touch-none ${
+          tool === "delete" ? "cursor-crosshair" : "cursor-default"
+        }`}
       />
 
       {/* Floating Toolbar - Top Center */}
@@ -62,6 +68,11 @@ export function Canvas({
             activated={tool === "eraser"}
             onClick={() => setTool("eraser")}
             icon={<Eraser className="w-5 h-5" />}
+          />
+          <IconButton
+            activated={tool === "delete"}
+            onClick={() => setTool("delete")}
+            icon={<Trash2 className="w-5 h-5" />}
           />
         </div>
       </div>
