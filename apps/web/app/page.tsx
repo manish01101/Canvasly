@@ -111,9 +111,9 @@ export default function LandingPage() {
             <Button className="px-8 py-4 text-lg shadow-xl shadow-[var(--color-secondary)]/20 hover:scale-105 transition-transform duration-200">
               <Link href={"/signup"}>Get Started for Free</Link>
             </Button>
-            <Link href={"/demo"}>
-              <button className="px-8 py-4 text-lg font-semibold text-gray-700 hover:text-[var(--color-primary)] transition-colors flex items-center gap-2 cursor-pointer transition duration-150 hover:scale-105 ease-in-out hover:text-gray-600 hover:bg-gray-100 rounded-xl">
-                View Live Demo <span aria-hidden="true">→</span>
+            <Link href={"/playground"}>
+              <button className="px-8 py-4 text-lg font-semibold text-gray-700  transition-colors flex items-center gap-2 cursor-pointer transition duration-150 hover:scale-105 ease-in-out bg-gray-200 hover:bg-gray-300 rounded-xl">
+                Try it <span aria-hidden="true">→</span>
               </button>
             </Link>
           </div>

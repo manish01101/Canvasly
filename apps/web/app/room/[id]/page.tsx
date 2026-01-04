@@ -3,9 +3,9 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import axios from "axios";
-import { BACKEND_URL } from "../../../config";
-import { Canvas } from "../../../components/Canvas";
-import useSocket from "../../../hooks/useSocket";
+import { BACKEND_URL } from "../../config";
+import { Canvas } from "../../components/Canvas";
+import useSocket from "../../hooks/useSocket";
 import { MessageSquare, X, LogOut } from "lucide-react";
 
 interface Chat {
