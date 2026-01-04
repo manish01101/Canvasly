@@ -174,11 +174,7 @@ wss.on("connection", (ws, request) => {
       // 2. then broadcast immediately
       users.forEach((user) => {
         // only send if user are in the room AND the connection is open
-        if (
-          user.rooms.has(roomId) &&
-          user.ws.readyState === WebSocket.OPEN &&
-          user.ws !== ws
-        ) {
+        if (user.rooms.has(roomId) && user.ws.readyState === WebSocket.OPEN) {
           user.ws.send(
             JSON.stringify({
               type: "chat",
