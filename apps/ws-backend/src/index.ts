@@ -4,14 +4,52 @@ import { JWT_SECRET } from "@repo/backend-common/config";
 import { DeleteShapeSchema, CreateShapeSchema } from "@repo/common/types";
 import { IncomingMessage } from "http";
 import { prisma } from "@repo/db";
+import http from "http";
 import "dotenv/config";
 
 const PORT = process.env.PORT || 8080;
 
-const wss = new WebSocketServer({ port: Number(PORT) });
+/* ---------------- SERVER CREATION ---------------- */
+const server = http.createServer((req, res) => {
+  if (req.method === "GET" && req.url === "/health") {
+    res.writeHead(200, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ status: "ok" }));
+    return;
+  }
+  // handle other HTTP requests
+  res.writeHead(200, { "Content-Type": "text/plain" });
+  res.write("WebSocket Server is running. Connect via ws://...");
+  res.end();
+});
 
-console.log(JWT_SECRET);
-console.log("server is on port: ", PORT);
+const wss = new WebSocketServer({ noServer: true });
+
+/* ---------------- CORS & UPGRADE HANDLING ---------------- */
+const allowedOrigins = [
+  "http://localhost:3000",
+  "https://canvasly-web-seven.vercel.app",
+];
+server.on("upgrade", (request, socket, head) => {
+  // console.log("origin is: ", request);
+  // console.log("socket is: ", socket);
+  // console.log("head is: ", head);
+  const origin = request.headers.origin;
+
+  if (origin && !allowedOrigins.includes(origin)) {
+    console.log(`Blocked connection from unauthorized origin: ${origin}`);
+    socket.write("HTTP/1.1 401 Unauthorized\r\n\r\n");
+    socket.destroy();
+    return;
+  }
+
+  // handle upgrade if origin is valid
+  wss.handleUpgrade(request, socket, head, (ws) => {
+    wss.emit("connection", ws, request); // this manually triggers the wss.on('connection', ...)
+  });
+});
+
+// console.log(JWT_SECRET);
+// console.log("server is on port: ", PORT);
 
 interface User {
   ws: WebSocket;
@@ -244,4 +282,9 @@ wss.on("connection", (ws, request) => {
 
 wss.on("close", function close() {
   console.log("Connection closed");
+});
+
+/* ---------------- LISTEN ON THE HTTP SERVER ---------------- */
+server.listen(PORT, () => {
+  console.log(`WebSocket server is listening on port ${PORT}`);
 });

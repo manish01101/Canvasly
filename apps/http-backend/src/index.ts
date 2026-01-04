@@ -8,11 +8,16 @@ import cors from "cors";
 import "dotenv/config";
 
 const PORT = Number(process.env.PORT) || 8000;
-console.log(PORT);
+// console.log(PORT);
 
 const app = express();
 app.use(express.json());
-app.use(cors());
+app.use(
+  cors({
+    origin: ["https://canvasly-web-seven.vercel.app", "http://localhost:3000"],
+    credentials: true,
+  })
+);
 
 app.post("/signup", async (req, res) => {
   const parsedBody = signupSchema.safeParse(req.body);
@@ -160,5 +165,5 @@ app.get("/rooms", async (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`running http on ${PORT}`);
+  console.log(`HTTP Server is running on ${PORT}`);
 });

@@ -21,7 +21,7 @@ if (!process.env.DATABASE_URL) {
 } else {
   console.log("Using pre-existing DATABASE_URL from environment.");
 }
-console.log("DATABASE_URL:", process.env.DATABASE_URL);
+// console.log("DATABASE_URL:", process.env.DATABASE_URL);
 // --- END DEBUGGING ---
 
 const connectionString = process.env.DATABASE_URL;
