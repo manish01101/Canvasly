@@ -165,7 +165,7 @@ wss.on("connection", (ws, request) => {
         .create({
           data: { roomId, message, userId },
         })
-        .catch((e) => console.error("Chat DB Error:", e));
+        .catch((e: any) => console.error("Chat DB Error:", e));
 
       console.log(
         `CHAT from ${currentUser.userId} to room ${roomId}: ${parsedData.message}`
