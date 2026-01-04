@@ -8,8 +8,11 @@ import {
   RectangleHorizontalIcon,
   Eraser,
   Trash2,
+  Hand,
+  CircleDashed,
 } from "lucide-react";
-import { Game, Tool } from "../draw";
+import { Game } from "../draw/Game";
+import { Tool } from "../draw/types";
 
 export function Canvas({
   roomId,
@@ -22,18 +25,42 @@ export function Canvas({
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [game, setGame] = useState<Game | null>(null);
-  const [tool, setTool] = useState<Tool>("rect");
+  const [tool, setTool] = useState<Tool>("move");
+  const [strokeWidth, setStrokeWidth] = useState<number>(2);
 
   useEffect(() => {
     if (!canvasRef.current) return;
     const g = new Game(canvasRef.current, roomId, socket, initialShapes);
     setGame(g);
-    return () => g.destroy();
+    g.setTool("move"); //default tool
+
+    return () => {
+      g.destroy();
+    };
   }, [roomId, socket, initialShapes]);
 
+  // Update Tool
   useEffect(() => {
     game?.setTool(tool);
   }, [tool, game]);
+
+  // Update Stroke Width
+  useEffect(() => {
+    game?.setStrokeWidth(strokeWidth);
+  }, [strokeWidth, game]);
+
+  // Handle Resize
+  useEffect(() => {
+    const handleResize = () => {
+      if (canvasRef.current && game) {
+        canvasRef.current.width = window.innerWidth;
+        canvasRef.current.height = window.innerHeight;
+        game.redraw();
+      }
+    };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, [game]);
 
   return (
     <div className="relative w-full h-full overflow-hidden">
@@ -41,14 +68,19 @@ export function Canvas({
         ref={canvasRef}
         width={window.innerWidth}
         height={window.innerHeight}
-        className={`block bg-black touch-none ${
-          tool === "delete" ? "cursor-crosshair" : "cursor-default"
-        }`}
+        className="block bg-black touch-none"
+        onContextMenu={(e) => e.preventDefault()}
       />
 
-      {/* Floating Toolbar - Top Center */}
-      <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50">
+      {/* Top Center Toolbar */}
+      <div className="absolute top-2 left-1/2 -translate-x-1/2 z-50 flex flex-col items-center gap-3">
+        {/* Tool Selector */}
         <div className="flex gap-3 bg-gray-900/90 backdrop-blur-sm border border-gray-700 px-4 py-2 rounded-full shadow-xl">
+          <IconButton
+            activated={tool === "move"}
+            onClick={() => setTool("move")}
+            icon={<Hand className="w-5 h-5" />}
+          />
           <IconButton
             activated={tool === "pencil"}
             onClick={() => setTool("pencil")}
@@ -65,16 +97,56 @@ export function Canvas({
             icon={<Circle className="w-5 h-5" />}
           />
           <IconButton
+            activated={tool === "ellipse"}
+            onClick={() => setTool("ellipse")}
+            icon={<CircleDashed className="w-5 h-5" />}
+          />
+          <IconButton
             activated={tool === "eraser"}
             onClick={() => setTool("eraser")}
             icon={<Eraser className="w-5 h-5" />}
           />
+          <div className="bg-gray-500 w-px" aria-hidden="true"></div>
           <IconButton
             activated={tool === "delete"}
             onClick={() => setTool("delete")}
             icon={<Trash2 className="w-5 h-5" />}
           />
         </div>
+
+        {/* Stroke Width Selector (Only show for drawing tools) */}
+        {(tool === "pencil" ||
+          tool === "rect" ||
+          tool === "circle" ||
+          tool === "ellipse" ||
+          tool === "eraser") && (
+          <div className="flex gap-3 bg-gray-900/90 backdrop-blur-sm border border-gray-700 px-4 py-1 rounded-full shadow-xl animate-in fade-in slide-in-from-top-2">
+            <button
+              onClick={() => setStrokeWidth(2)}
+              className={`p-2 rounded-full transition-all ${strokeWidth === 2 ? "bg-blue-600" : "hover:bg-gray-800"}`}
+            >
+              <div className="w-1.5 h-1.5 rounded-full bg-white" />
+            </button>
+            <button
+              onClick={() => setStrokeWidth(6)}
+              className={`p-2 rounded-full transition-all ${strokeWidth === 6 ? "bg-blue-600" : "hover:bg-gray-800"}`}
+            >
+              <div className="w-2.5 h-2.5 rounded-full bg-white" />
+            </button>
+            <button
+              onClick={() => setStrokeWidth(12)}
+              className={`p-2 rounded-full transition-all ${strokeWidth === 12 ? "bg-blue-600" : "hover:bg-gray-800"}`}
+            >
+              <div className="w-4 h-4 rounded-full bg-white" />
+            </button>
+            <button
+              onClick={() => setStrokeWidth(20)}
+              className={`p-2 rounded-full transition-all ${strokeWidth === 20 ? "bg-blue-600" : "hover:bg-gray-800"}`}
+            >
+              <div className="w-6 h-6 rounded-full bg-white" />
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

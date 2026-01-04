@@ -66,7 +66,7 @@ const NavBar = () => {
       console.log("room is created", res.data);
       setIsCreateRoomOpen(false);
       setRoomName("");
-      // router.push(`/room/${res.data.roomId}`); //  auto-redirect
+      router.push(`/room/${res.data.roomId}`); //  auto-redirect
     } catch (error: any) {
       console.log("Error creating room:", error.response.data.message);
     }

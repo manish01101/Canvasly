@@ -1,10 +1,10 @@
 export type Point = { x: number; y: number };
 
-export type Tool = "rect" | "circle" | "pencil" | "eraser" | "delete";
+export type Tool = "rect" | "circle" | "ellipse" | "pencil" | "eraser" | "delete" | "move";
 
 export type Shape = {
   id: string;
-  type: "rect" | "circle" | "pencil" | "eraser";
+  type: "rect" | "circle" | "ellipse" | "pencil" | "eraser";
   x?: number;
   y?: number;
   width?: number;
@@ -12,6 +12,9 @@ export type Shape = {
   centerX?: number;
   centerY?: number;
   radius?: number;
+  radiusX?: number;
+  radiusY?: number;
   points?: Point[];
   color?: string;
+  strokeWidth?: number;
 };

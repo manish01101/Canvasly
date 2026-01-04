@@ -65,4 +65,5 @@ enum ShapeType {
   circle
   pencil
   eraser
+  ellipse
 }

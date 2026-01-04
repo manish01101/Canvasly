@@ -136,7 +136,11 @@ wss.on("connection", (ws, request) => {
       // 2. then broadcast immediately
       users.forEach((user) => {
         // only send if user are in the room AND the connection is open
-        if (user.rooms.has(roomId) && user.ws.readyState === WebSocket.OPEN) {
+        if (
+          user.rooms.has(roomId) &&
+          user.ws.readyState === WebSocket.OPEN &&
+          user.ws !== ws
+        ) {
           user.ws.send(
             JSON.stringify({
               type: "chat",
@@ -161,9 +165,13 @@ wss.on("connection", (ws, request) => {
       if (typeof roomId !== "string" || !shape || !shape.type) return;
 
       // 1.broadcast to everyone immediately (low latency)
-      users.forEach((u) => {
-        if (u.rooms.has(roomId) && u.ws.readyState === WebSocket.OPEN) {
-          u.ws.send(
+      users.forEach((user) => {
+        if (
+          user.rooms.has(roomId) &&
+          user.ws.readyState === WebSocket.OPEN &&
+          user.ws !== ws
+        ) {
+          user.ws.send(
             JSON.stringify({
               type: "draw",
               shape,
@@ -177,6 +185,7 @@ wss.on("connection", (ws, request) => {
       try {
         await prisma.shape.create({
           data: {
+            id: shape.id,
             roomId,
             userId,
             type: shape.type,
@@ -207,9 +216,13 @@ wss.on("connection", (ws, request) => {
       }
 
       // 2.broadcast to everyone
-      users.forEach((u) => {
-        if (u.rooms.has(roomId) && u.ws.readyState === WebSocket.OPEN) {
-          u.ws.send(
+      users.forEach((user) => {
+        if (
+          user.rooms.has(roomId) &&
+          user.ws.readyState === WebSocket.OPEN &&
+          user.ws !== ws
+        ) {
+          user.ws.send(
             JSON.stringify({
               type: "delete_shape",
               shapeId: shapeId,
