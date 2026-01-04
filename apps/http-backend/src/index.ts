@@ -11,13 +11,21 @@ const PORT = Number(process.env.PORT) || 8000;
 // console.log(PORT);
 
 const app = express();
-app.use(express.json());
+
 app.use(
   cors({
     origin: ["https://canvasly-web-seven.vercel.app", "http://localhost:3000"],
     credentials: true,
   })
 );
+app.use(express.json());
+
+app.get("/", (req, res) => {
+  res.status(200).send("HTTP server is running.");
+});
+app.get("/health", (req, res) => {
+  res.status(200).json({ status: "ok" });
+});
 
 app.post("/signup", async (req, res) => {
   const parsedBody = signupSchema.safeParse(req.body);
