@@ -111,6 +111,13 @@ const NavBar = () => {
           {/* --- DESKTOP MENU --- */}
           <div className="hidden md:flex items-center gap-8">
             <button
+              onClick={() => router.push("/playground")}
+              className="text-gray-200 hover:text-[var(--color-secondary)] font-medium transition cursor-pointer"
+            >
+              Playground
+            </button>
+
+            <button
               onClick={() => setIsCreateRoomOpen(true)}
               className="text-gray-200 hover:text-[var(--color-secondary)] font-medium transition cursor-pointer"
             >
@@ -198,6 +205,12 @@ const NavBar = () => {
         {/* --- MOBILE MENU --- */}
         {isMobileMenuOpen && (
           <div className="md:hidden absolute top-full left-0 w-full bg-[var(--color-primary)] border-t border-white/10 shadow-xl flex flex-col p-4 gap-2 animate-in slide-in-from-top-5">
+            <button
+              onClick={() => router.push("/playground")}
+              className="text-white text-left py-3 px-4 rounded hover:bg-white/10 font-medium cursor-pointer"
+            >
+              Playground
+            </button>
             <button
               onClick={() => {
                 setIsCreateRoomOpen(true);

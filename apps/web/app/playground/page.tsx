@@ -7,6 +7,7 @@ import {
   CircleDashed,
   Eraser,
   Hand,
+  LogOut,
   Pencil,
   RectangleHorizontalIcon,
   Trash2,
@@ -14,12 +15,14 @@ import {
 import { IconButton } from "../components/IconButton";
 import Logo from "../components/Logo";
 import { CanvasEngine } from "./CanvasEngine";
+import { useRouter } from "next/navigation";
 
 const page = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [game, setGame] = useState<CanvasEngine | null>(null);
   const [tool, setTool] = useState<Tool>("move");
   const [strokeWidth, setStrokeWidth] = useState<number>(2);
+  const router = useRouter();
 
   useEffect(() => {
     if (!canvasRef.current) return;
@@ -133,6 +136,16 @@ const page = () => {
               </button>
             </div>
           )}
+        </div>
+
+        <div className="absolute top-2 right-4">
+          <button
+            onClick={() => router.push("/")}
+            className="bg-gray-800 hover:bg-red-600 p-3 rounded-full shadow-xl border border-gray-600 hover:border-red-500 transition-all text-white flex items-center justify-center"
+            title="Leave Room"
+          >
+            <LogOut size={20} />
+          </button>
         </div>
       </div>
     </>
