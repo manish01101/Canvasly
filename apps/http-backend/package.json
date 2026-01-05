@@ -17,6 +17,7 @@
     "@prisma/client-runtime-utils": "^7.1.0",
     "@repo/typescript-config": "workspace:*",
     "@types/cors": "^2.8.19",
+    "prisma": "^7.2.0",
     "typescript": "^5.5.3"
   },
   "dependencies": {

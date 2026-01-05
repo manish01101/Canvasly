@@ -4,7 +4,9 @@
   "description": "",
   "main": "./dist/index.js",
   "scripts": {
-    "build": "tsc"
+    "build": "tsc",
+    "db:generate": "prisma generate",
+    "db:deploy": "prisma migrate deploy"
   },
   "keywords": [],
   "author": "",
@@ -13,10 +15,10 @@
   "devDependencies": {
     "@prisma/client-runtime-utils": "^7.1.0",
     "@repo/typescript-config": "workspace:*",
-    "dotenv": "^17.2.3",
     "typescript": "^5.x.x"
   },
   "dependencies": {
+    "dotenv": "^17.2.3",
     "@prisma/adapter-pg": "^7.1.0",
     "@prisma/client": "^7.1.0",
     "@types/node": "^24.10.1",

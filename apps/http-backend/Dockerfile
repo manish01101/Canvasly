@@ -1,37 +1,63 @@
 FROM node:20-alpine AS base
 
-#builder->Takes the massive repo and filters it down.
+# ---------------------------------------------------
+# 1. BUILDER: Filters the repo down to just this app
+# ---------------------------------------------------
 FROM base AS builder
 RUN apk add --no-cache libc6-compat
 WORKDIR /app
 RUN npm install -g turbo pnpm
 COPY . .
+# Prune the workspace to just this app
 RUN turbo prune --scope=http-backend --docker
 
-#installer->Installs specific dependencies and compiles the TypeScript code.
+# ---------------------------------------------------
+# 2. INSTALLER: Installs deps and compiles code
+# ---------------------------------------------------
 FROM base AS installer
 WORKDIR /app
-RUN npm install -g pnpm
+RUN npm install -g pnpm turbo
 COPY --from=builder /app/out/json/ .
 COPY --from=builder /app/out/pnpm-lock.yaml ./pnpm-lock.yaml
-# (frozen lockfile for consistency)
-RUN pnpm install --frozen-lockfile 
+
+# Install dependencies
+RUN pnpm install --frozen-lockfile
+
+# Copy the source code
 COPY --from=builder /app/out/full/ .
+
+# copy prisma.config.ts from builder (Turbo often ignores this file)
+COPY --from=builder /app/packages/db/prisma.config.ts ./packages/db/prisma.config.ts
+
+# Generate the client
 RUN npx prisma generate --schema=packages/db/prisma/schema.prisma
-RUN pnpm run build --filter=http-backend
 
+# Build the app
+RUN turbo run build --filter=http-backend...
 
-#runner->only part that actually goes to production. It copies only the compiled Javascript files from the installer stage. It leaves behind the heavy source code, TypeScript compilers, and dev tools.
+# ---------------------------------------------------
+# 3. RUNNER: The Production Image (only part that actually goes to production. It copies only the compiled Javascript files from the installer stage. It leaves behind the heavy source code, TypeScript compilers, and dev tools)
+# ---------------------------------------------------
 FROM base AS runner
 WORKDIR /app
-# Create non-root user for security
+
+# Install system libs & Global Prisma CLI
+RUN apk add --no-cache openssl libc6-compat
+RUN npm install -g prisma
+
+# Create user
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 expressjs
 USER expressjs
 
-# Copy the built app
-COPY --from=installer /app .
+# Copy the built application
+COPY --from=installer --chown=expressjs:nodejs /app .
+
+# copy the config file again for the runtime this ensures 'prisma migrate' has the file it needs
+COPY --from=builder --chown=expressjs:nodejs /app/packages/db/prisma.config.ts ./packages/db/prisma.config.ts
 
 ENV PORT=8000
 EXPOSE 8000
-CMD ["node", "apps/http-backend/dist/index.js"]
+
+# Start command
+CMD ["sh", "-c", "prisma migrate deploy --schema=packages/db/prisma/schema.prisma --config=packages/db/prisma.config.ts && node apps/http-backend/dist/index.js"]

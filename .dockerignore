@@ -1,5 +1,19 @@
-node_modules/
-.next/
-dist/
-.git/
+# Dependency directories
+node_modules
+npm-debug.log
+
+# Version control
+.git
+.gitignore
+
+# Build artifacts
+dist
+build
+coverage
+.next
+.turbo
+
+# Environment files
 .env
+Dockerfile
+.dockerignore

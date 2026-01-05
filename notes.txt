@@ -81,3 +81,13 @@ wss.on('connection', (ws) => {
     }
   });
 });
+
+---- ERR IF NEW POSTGRES CREATED ---
+When you create a fresh Postgres container, it only contains a database named postgres by default.
+
+Your connection string is trying to connect to a database named /canvasly. Prisma cannot create the database itself; it only creates the tables inside an existing database. If the database canvasly doesn't exist yet, the connection will be refused.
+
+The Fix: Either change your .env to use the default database: DATABASE_URL="postgresql://postgres:mysecretpassword@host.docker.internal:5432/postgres?schema=public..."
+
+OR ensure you created the standalone Postgres with that specific name:
+docker run -d --name my-postgres -p 5432:5432 -e POSTGRES_PASSWORD=mysecretpassword -e POSTGRES_DB=canvasly postgres
