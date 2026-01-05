@@ -58,9 +58,6 @@ USER expressjs
 # Copy the built application
 COPY --from=installer --chown=expressjs:nodejs /app .
 
-# copy the config file again for the runtime this ensures 'prisma migrate' has the file it needs
-COPY --from=builder --chown=expressjs:nodejs /app/packages/db/prisma.config.ts ./packages/db/prisma.config.ts
-
 ENV PORT=8000
 EXPOSE 8000
 
