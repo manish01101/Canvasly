@@ -26,6 +26,11 @@ RUN pnpm install --frozen-lockfile
 # Copy the source code
 COPY --from=builder /app/out/full/ .
 
+# Define a Build Argument for the Database URL, this allows Railway to pass the real URL during build if it wants to.
+ARG DATABASE_URL
+# If DATABASE_URL is empty during build, we use a generic postgres string, so 'prisma generate' knows the provider is PostgreSQL and doesn't crash.
+ENV DATABASE_URL=${DATABASE_URL:-postgresql://postgres:password@localhost:5432/postgres}
+
 # copy prisma.config.ts from builder (Turbo often ignores this file)
 COPY --from=builder /app/packages/db/prisma.config.ts ./packages/db/prisma.config.ts
 
