@@ -33,8 +33,8 @@ COPY --from=builder /app/packages/db/prisma.config.ts ./packages/db/prisma.confi
 # Generate Prisma Client
 RUN npx prisma generate --schema=packages/db/prisma/schema.prisma
 
-# Build the project
-RUN turbo run build --filter=ws-backend...
+# Build the project (explicitly pass the ENV variable into the turbo command)
+RUN DATABASE_URL=$DATABASE_URL turbo run build --filter=ws-backend...
 
 # ---------------------------------------------------
 # 3. RUNNER
