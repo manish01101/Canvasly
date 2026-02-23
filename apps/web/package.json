@@ -11,13 +11,15 @@
     "check-types": "next typegen && tsc --noEmit"
   },
   "dependencies": {
+    "@repo/common": "workspace:*",
     "@repo/ui": "workspace:*",
     "axios": "^1.13.2",
     "framer-motion": "^12.23.26",
     "lucide-react": "^0.561.0",
     "next": "^16.1.1",
     "react": "^19.2.3",
-    "react-dom": "^19.2.3"
+    "react-dom": "^19.2.3",
+    "zod": "^4.2.1"
   },
   "devDependencies": {
     "@next/eslint-plugin-next": "^15.4.6",

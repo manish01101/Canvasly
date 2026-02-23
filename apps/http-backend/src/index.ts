@@ -6,6 +6,9 @@ import { prisma } from "@repo/db";
 import { middleware } from "./middleware.js";
 import cors from "cors";
 import "dotenv/config";
+import bcrypt from "bcrypt";
+import { generateOTP } from "./utils/generateOTP.js";
+import { sendOTP } from "./utils/sendOTP.js";
 
 const PORT = Number(process.env.PORT) || 8000;
 // console.log(PORT);
@@ -16,7 +19,7 @@ app.use(
   cors({
     origin: ["https://canvasly-web-seven.vercel.app", "http://localhost:3000"],
     credentials: true,
-  })
+  }),
 );
 app.use(express.json());
 
@@ -40,22 +43,69 @@ app.post("/signup", async (req, res) => {
     if (user) {
       return res.status(409).json({ message: "User already exists" });
     }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const otp = generateOTP();
+
     const newUser = await prisma.user.create({
       data: {
         email,
-        password,
         name,
+        password: hashedPassword,
+        otp,
+        otpExpiresAt: new Date(Date.now() + 10 * 60 * 1000),
       },
     });
-    // console.log(JWT_SECRET)
-    const token = jwt.sign(
-      { userId: newUser.id, email: newUser.email },
-      JWT_SECRET,
-      { expiresIn: "24h" }
-    );
-    return res.status(201).json({ token, name: newUser.name });
+
+    // send otp
+    sendOTP({ email, otp });
+
+    return res.status(200).json({
+      message: "OTP sent to email",
+      verificationRequired: true,
+    });
   } catch (error) {
     console.error("Signup error:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+});
+
+app.post("/verify-otp", async (req, res) => {
+  const { email, otp } = req.body;
+
+  try {
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user) {
+      return res
+        .status(400)
+        .json({ message: "Invalid request - User not found!" });
+    }
+    if (user.isVerified) {
+      return res.status(400).json({ message: "User already verified!" });
+    }
+    if (user.otp !== otp) {
+      return res.status(400).json({ message: "Invalid OTP" });
+    }
+    if (!user.otpExpiresAt || user.otpExpiresAt < new Date()) {
+      return res.status(400).json({ message: "OTP expired" });
+    }
+
+    await prisma.user.update({
+      where: { email },
+      data: {
+        isVerified: true,
+        otp: null,
+        otpExpiresAt: null,
+      },
+    });
+
+    const token = jwt.sign({ userId: user.id, email: user.email }, JWT_SECRET, {
+      expiresIn: "5d",
+    });
+
+    return res.json({ token, name: user.name });
+  } catch (error) {
+    console.error("OTP verify error:", error);
     return res.status(500).json({ message: "Internal server error" });
   }
 });
@@ -70,11 +120,20 @@ app.post("/signin", async (req, res) => {
   const { email, password } = parsedBody.data;
   try {
     const user = await prisma.user.findUnique({ where: { email } });
-    if (!user || user.password != password) {
+    if (!user) {
       return res.status(401).json({ message: "Invalid credentials" });
     }
+
+    const passwordMatch = await bcrypt.compare(password, user.password);
+    if (!passwordMatch) {
+      return res.status(401).json({ message: "Invalid credentials" });
+    }
+
+    if (!user.isVerified) {
+      return res.status(403).json({ message: "Email not verified" });
+    }
     const token = jwt.sign({ userId: user.id, email: user.email }, JWT_SECRET, {
-      expiresIn: "24h",
+      expiresIn: "5d",
     });
     return res.json({ token, name: user.name });
   } catch (error) {

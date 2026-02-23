@@ -1,58 +1,120 @@
-# Turborepo Tailwind CSS starter
+# Canvasly
 
-This Turborepo starter is maintained by the Turborepo core team.
+> Real-Time Collaborative Whiteboard Built with Express.js, Next.js, WebSockets, Prisma, and Turborepo.
 
-## Using this example
+Canvasly is a lightweight collaborative canvas application designed for sketching ideas, drawing diagrams, and real-time visual brainstorming. It enables multiple users to collaborate simultaneously with consistent shared state and low-latency updates.
 
-Run the following command:
+## Preview
 
-```sh
-npx create-turbo@latest -e with-tailwind
+![1771868104318](image/README/1771868104318.png)
+
+---
+
+## Features
+
+- Real-time multi-user collaboration (WebSockets)
+- Distributed state synchronization
+- Drawing tools (pen, ellipse, eraser, delete, stroke width control)
+- Optimistic UI updates
+- Email OTP authentication with Nodemailer
+- Secure password hashing with bcrypt
+- Monorepo architecture using Turborepo
+- End-to-end type safety with Zod + Prisma
+- Dockerized deployment
+- PostgreSQL persistence
+- Clean UI built with TailwindCSS
+
+---
+
+## Architecture
+
+Canvasly uses a scalable monorepo structure:
+
+```
+apps/
+  http-backend  -> Express.js backend
+  web/          -> Next.js frontend
+  ws-backend    -> websocket
+packages/
+  backend-common   -> env config
+  common           -> Shared Zod schemas & types
+  db               -> Prisma schema & client
 ```
 
-## What's inside?
+### Core Technologies
 
-This Turborepo includes the following packages/apps:
+- **Frontend**: Next.js (App Router), TypeScript, TailwindCSS
+- **Backend**: Express, WebSockets
+- **Database**: PostgreSQL + Prisma ORM
+- **Auth**: Email OTP verification (Nodemailer), JWT
+- **Monorepo**: Turborepo + pnpm workspaces
+- **Validation**: Zod
 
-### Apps and Packages
+---
 
-- `docs`: a [Next.js](https://nextjs.org/) app with [Tailwind CSS](https://tailwindcss.com/)
-- `web`: another [Next.js](https://nextjs.org/) app with [Tailwind CSS](https://tailwindcss.com/)
-- `ui`: a stub React component library with [Tailwind CSS](https://tailwindcss.com/) shared by both `web` and `docs` applications
-- `@repo/eslint-config`: `eslint` configurations (includes `eslint-config-next` and `eslint-config-prettier`)
-- `@repo/typescript-config`: `tsconfig.json`s used throughout the monorepo
+## Authentication Flow
 
-Each package/app is 100% [TypeScript](https://www.typescriptlang.org/).
+1. User signs up
+2. OTP sent via email (Nodemailer)
+3. User verifies OTP
+4. JWT issued after verification
+5. Secure login with hashed passwords (bcrypt)
 
-### Building packages/ui
+---
 
-This example is set up to produce compiled styles for `ui` components into the `dist` directory. The component `.tsx` files are consumed by the Next.js apps directly using `transpilePackages` in `next.config.ts`. This was chosen for several reasons:
+## Real-Time System Design
 
-- Make sharing one `tailwind.config.ts` to apps and packages as easy as possible.
-- Make package compilation simple by only depending on the Next.js Compiler and `tailwindcss`.
-- Ensure Tailwind classes do not overwrite each other. The `ui` package uses a `ui-` prefix for it's classes.
-- Maintain clear package export boundaries.
+Canvasly implements:
 
-Another option is to consume `packages/ui` directly from source without building. If using this option, you will need to update the `tailwind.config.ts` in your apps to be aware of your package locations, so it can find all usages of the `tailwindcss` class names for CSS compilation.
+- WebSocket-based state broadcasting
+- Prevention of echo messages
+- Race condition handling
+- Optimistic rendering
+- Conflict-safe deletion handling
+- Shared room-based collaboration
 
-For example, in [tailwind.config.ts](packages/tailwind-config/tailwind.config.ts):
+---
 
-```js
-  content: [
-    // app content
-    `src/**/*.{js,ts,jsx,tsx}`,
-    // include packages if not transpiling
-    "../../packages/ui/*.{js,ts,jsx,tsx}",
-  ],
+## Docker Support
+
+Build and run using:
+
+```
+docker-compose up --build
 ```
 
-If you choose this strategy, you can remove the `tailwindcss` and `autoprefixer` dependencies from the `ui` package.
+Handles:
 
-### Utilities
+- Prisma migrations
+- DATABASE_URL injection
+- Turbo build environment variables
 
-This Turborepo has some additional tools already setup for you:
+---
 
-- [Tailwind CSS](https://tailwindcss.com/) for styles
-- [TypeScript](https://www.typescriptlang.org/) for static type checking
-- [ESLint](https://eslint.org/) for code linting
-- [Prettier](https://prettier.io) for code formatting
+## Installation (Local Development)
+
+```bash
+pnpm install
+pnpm dev
+```
+
+To run specific app:
+
+```bash
+pnpm --filter web dev
+pnpm --filter http-backend dev
+pnpm --filter ws-backend dev
+```
+
+---
+
+## Future Improvements
+
+- Refresh token rotation
+- Rate-limited OTP resend
+- Redis-based session store
+- Room-level access control
+- Presence indicators (online users)
+- CRDT-based state model
+
+---

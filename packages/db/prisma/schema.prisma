@@ -25,9 +25,14 @@ model User {
   name     String
   password String
   photo    String?
-  room     Room[]
-  chat     Chat[]
-  shape    Shape[]
+
+  isVerified   Boolean   @default(false)
+  otp          String?
+  otpExpiresAt DateTime?
+
+  room  Room[]
+  chat  Chat[]
+  shape Shape[]
 }
 
 model Room {
@@ -50,9 +55,9 @@ model Chat {
 }
 
 model Shape {
-  id        String       @id 
+  id        String    @id
   type      ShapeType
-  data      Json      // for coordinates
+  data      Json // for coordinates
   roomId    String
   room      Room      @relation(fields: [roomId], references: [id], onDelete: Cascade)
   userId    String

@@ -6,9 +6,17 @@ interface Props {
   placeholder: string;
   onchange: (event: React.ChangeEvent<HTMLInputElement>) => void;
   onkeydown?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
+  value?: string;
 }
 
-const InputBox = ({ label, type, placeholder, onchange, onkeydown }: Props) => {
+const InputBox = ({
+  label,
+  type,
+  placeholder,
+  onchange,
+  onkeydown,
+  value,
+}: Props) => {
   return (
     <div className="flex flex-col ">
       <label htmlFor={label}>{label}</label>
@@ -18,6 +26,7 @@ const InputBox = ({ label, type, placeholder, onchange, onkeydown }: Props) => {
         className="border rounded py-2 px-4 bg-white"
         onChange={onchange}
         onKeyDown={onkeydown}
+        value={value}
       />
     </div>
   );

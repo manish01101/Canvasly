@@ -15,6 +15,7 @@ import {
 import Button from "./components/Button";
 import Link from "next/link";
 import NavBar from "./components/NavBar";
+import { useEffect, useState } from "react";
 
 // --- Components for the Mockup ---
 
@@ -81,6 +82,15 @@ const FloatingToolbar = () => (
 );
 
 export default function LandingPage() {
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (token) {
+      setIsLoggedIn(true);
+    }
+  }, []);
+
   return (
     <div className="min-h-screen bg-white text-gray-900 overflow-hidden">
       <NavBar />
@@ -108,12 +118,15 @@ export default function LandingPage() {
             speed.
           </p>
           <div className="flex flex-wrap gap-4">
-            <Button className="px-8 py-4 text-lg shadow-xl shadow-[var(--color-secondary)]/20 hover:scale-105 transition-transform duration-200">
-              <Link href={"/signup"}>Get Started for Free</Link>
-            </Button>
+            {!isLoggedIn && (
+              <Button className="px-8 py-4 text-lg shadow-xl shadow-[var(--color-secondary)]/20 hover:scale-105 transition-transform duration-200">
+                <Link href={"/signup"}>Get Started for Free</Link>
+              </Button>
+            )}
             <Link href={"/playground"}>
               <button className="px-8 py-4 text-lg font-semibold text-gray-700  transition-colors flex items-center gap-2 cursor-pointer transition duration-150 hover:scale-105 ease-in-out bg-gray-200 hover:bg-gray-300 rounded-xl">
-                Try it <span aria-hidden="true">→</span>
+                {isLoggedIn ? "Explore Playgound" : "Try it"}{" "}
+                <span aria-hidden="true">→</span>
               </button>
             </Link>
           </div>
@@ -266,7 +279,9 @@ export default function LandingPage() {
             and start creating.
           </p>
           <Button className="px-10 py-4 text-lg border-none" type="primary">
-            <Link href="/signup">Launch Canvasly Free</Link>
+            <Link href={isLoggedIn ? "/playground" : "/signup"}>
+              {isLoggedIn ? "Explore Playgound" : "Launch Canvasly Free"}
+            </Link>
           </Button>
         </div>
       </section>
