@@ -108,6 +108,83 @@ pnpm --filter ws-backend dev
 
 ---
 
+## Database Migrations
+
+Migrations are managed with Prisma and must run **before** application containers start to avoid schema mismatches.
+
+> Never run migrations inside `CMD`. When multiple replicas start simultaneously, this causes race conditions and breaks horizontal scaling.
+
+---
+
+### Railway
+
+Railway does not support `depends_on: service_completed_successfully`, so use the pre-deploy command instead.
+
+**Settings → Deploy → Pre-deploy Command:**
+
+```bash
+npx prisma migrate deploy --schema=packages/db/prisma/schema.prisma
+```
+
+This runs once per deployment. If it fails, the deployment is aborted and the existing container keeps running.
+
+---
+
+### Local / EC2 (Docker Compose)
+
+Add a dedicated `migrate` service and make backends wait on it:
+
+```yaml
+services:
+  migrate:
+    build:
+      context: .
+      dockerfile: apps/http-backend/Dockerfile
+    command: npx prisma migrate deploy --schema=packages/db/prisma/schema.prisma
+    env_file:
+      - .env
+
+  http-server:
+    build:
+      context: .
+      dockerfile: apps/http-backend/Dockerfile
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+
+  ws-server:
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+```
+
+---
+
+### GitHub Actions + EC2
+
+Add a migration step in your CI pipeline before starting containers:
+
+```yaml
+- name: Run migrations
+  run: |
+    ssh ec2-user@${{ secrets.EC2_HOST }} \
+    "cd /app && docker compose run --rm migrate"
+```
+
+---
+
+### Platform Summary
+
+| Platform          | Strategy                               |
+| ----------------- | -------------------------------------- |
+| Railway           | Pre-deploy command in dashboard        |
+| EC2 / Self-hosted | Dedicated `migrate` service in Compose |
+| GitHub Actions    | Migration step in CI before deploy     |
+
 ## Future Improvements
 
 - Refresh token rotation
