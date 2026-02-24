@@ -15,51 +15,50 @@ RUN turbo prune --scope=http-backend --docker
 # 2. INSTALLER: Installs deps and compiles code
 # ---------------------------------------------------
 FROM base AS installer
+RUN apk add --no-cache libc6-compat
 WORKDIR /app
 RUN npm install -g pnpm turbo
 COPY --from=builder /app/out/json/ .
 COPY --from=builder /app/out/pnpm-lock.yaml ./pnpm-lock.yaml
-
-# Install dependencies
-RUN pnpm install --frozen-lockfile
-
-# Copy the source code
+# Install dependencies (shamefully-hoist ensures nested packages resolve correctly in pnpm monorepos)
+RUN pnpm install --frozen-lockfile --shamefully-hoist
+# Copy the full source code
 COPY --from=builder /app/out/full/ .
-
-# Define a Build Argument for the Database URL, this allows Railway to pass the real URL during build if it wants to.
-ARG DATABASE_URL
-# If DATABASE_URL is empty during build, we use a generic postgres string, so 'prisma generate' knows the provider is PostgreSQL and doesn't crash.
-ENV DATABASE_URL=${DATABASE_URL:-postgresql://postgres:password@localhost:5432/postgres}
-
-# copy prisma.config.ts from builder (Turbo often ignores this file)
+# Manually copy prisma.config.ts since turbo prune tends to exclude it
 COPY --from=builder /app/packages/db/prisma.config.ts ./packages/db/prisma.config.ts
-
-# Generate the client
-RUN npx prisma generate --schema=packages/db/prisma/schema.prisma
-
+# Define a build argument for the DATABASE_URL.
+# Falls back to a dummy postgres URL so prisma generate doesn't crash during build.
+ARG DATABASE_URL
+ENV DATABASE_URL=${DATABASE_URL:-postgresql://postgres:password@localhost:5432/postgres}
+# Generate the Prisma client
+RUN pnpm --filter @repo/db run db:generate
 # Build the app
 RUN turbo run build --filter=http-backend...
 
 # ---------------------------------------------------
-# 3. RUNNER: The Production Image (only part that actually goes to production. It copies only the compiled Javascript files from the installer stage. It leaves behind the heavy source code, TypeScript compilers, and dev tools)
+# 3. RUNNER: Lean production image
+# Only compiled output, production node_modules, and prisma schema are copied — no source code or dev tools.
 # ---------------------------------------------------
 FROM base AS runner
 WORKDIR /app
 
-# Install system libs & Global Prisma CLI
+# Install system libs required by Prisma (openssl) and Node native addons (libc6-compat)
 RUN apk add --no-cache openssl libc6-compat
-RUN npm install -g prisma
 
-# Create user
+# Create a non-root user for security
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 expressjs
-USER expressjs
 
-# Copy the built application
+# Copy the entire app — needed because pnpm uses symlinks in node_modules that point to workspace package locations. Selective copying breaks them.
 COPY --from=installer --chown=expressjs:nodejs /app .
 
+USER expressjs
+
+# Use the local prisma CLI from node_modules — this guarantees the CLI version matches @prisma/client exactly, avoiding subtle version mismatch bugs.
+ENV PATH="/app/node_modules/.bin:$PATH"
 ENV PORT=8000
 EXPOSE 8000
 
-# Start command
-CMD ["sh", "-c", "prisma migrate deploy --schema=packages/db/prisma/schema.prisma --config=packages/db/prisma.config.ts && node apps/http-backend/dist/index.js"]
+# NOTE: Migrations are intentionally NOT run here.
+# Run `prisma migrate deploy` as a one-off pre-deploy job in Railway/CI config to avoid migration races when multiple replicas start simultaneously.
+CMD ["node", "apps/http-backend/dist/index.js"]

@@ -1,9 +1,9 @@
-import * as core from "express-serve-static-core";
-
 declare global {
   namespace Express {
-    interface Request extends core.Request {
+    interface Request {
       userId?: string;
     }
   }
 }
+
+export {}; //makes the file a module rather than a script
