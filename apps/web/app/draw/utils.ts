@@ -75,6 +75,17 @@ export function isPointInShape(shape: Shape, x: number, y: number): boolean {
     }
   }
 
+  if (shape.type === "text") {
+    const sx = shape.x ?? 0;
+    const sy = shape.y ?? 0;
+    const fontSize = shape.fontSize ?? 20;
+
+    const textWidth = (shape.text?.length || 0) * fontSize * 0.6;
+    const textHeight = fontSize;
+
+    return x >= sx && x <= sx + textWidth && y >= sy && y <= sy + textHeight;
+  }
+
   return false;
 }
 
@@ -85,7 +96,7 @@ function distanceToSegment(
   x1: number,
   y1: number,
   x2: number,
-  y2: number
+  y2: number,
 ) {
   const A = x - x1;
   const B = y - y1;

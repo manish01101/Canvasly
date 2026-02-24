@@ -20,7 +20,7 @@ export const CreateShapeSchema = z.object({
   message: z.string().optional(),
   shape: z.object({
     id: z.string(), // frontend generates UUIDs
-    type: z.enum(["rect", "circle", "ellipse", "pencil", "eraser"]),
+    type: z.enum(["rect", "circle", "ellipse", "pencil", "eraser", "text"]),
 
     // Rectangle properties
     x: z.number().optional(),
@@ -43,9 +43,13 @@ export const CreateShapeSchema = z.object({
         z.object({
           x: z.number(),
           y: z.number(),
-        })
+        }),
       )
       .optional(),
+
+    // text tool
+    text: z.string().optional(),
+    fontSize: z.number().optional(),
 
     color: z.string().optional(),
     strokeWidth: z.number().optional(),

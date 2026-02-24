@@ -10,6 +10,7 @@ import {
   Trash2,
   Hand,
   CircleDashed,
+  Type,
 } from "lucide-react";
 import { Game } from "../draw/Game";
 import { Tool } from "../draw/types";
@@ -62,6 +63,18 @@ export function Canvas({
     return () => window.removeEventListener("resize", handleResize);
   }, [game]);
 
+  // handle esc keypress
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setTool("move");
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
   return (
     <div className="relative w-full h-full overflow-hidden">
       <canvas
@@ -85,6 +98,11 @@ export function Canvas({
             activated={tool === "pencil"}
             onClick={() => setTool("pencil")}
             icon={<Pencil className="w-5 h-5" />}
+          />
+          <IconButton
+            activated={tool === "text"}
+            onClick={() => setTool("text")}
+            icon={<Type className="w-5 h-5" />}
           />
           <IconButton
             activated={tool === "rect"}

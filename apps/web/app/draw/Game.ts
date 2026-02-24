@@ -20,11 +20,14 @@ export class Game {
   private lastMouseY = 0;
   private spacePressed = false;
 
+  private textInput: HTMLDivElement | null = null;
+  private currentFontSize = 20;
+
   constructor(
     canvas: HTMLCanvasElement,
     private roomId: string,
     private socket: WebSocket,
-    initialShapes: Shape[]
+    initialShapes: Shape[],
   ) {
     this.canvas = canvas;
     this.ctx = canvas.getContext("2d")!;
@@ -49,8 +52,8 @@ export class Game {
   private handleSocketMessage(e: MessageEvent) {
     const data = JSON.parse(e.data);
     if (data.type === "draw" && data.shape) {
-      // console.log("Received Shape:", data.shape);
-      // console.log("Stroke Width:", data.shape.strokeWidth);
+      // console.log("received shape:", data.shape);
+      // console.log("stroke width:", data.shape.strokeWidth);
       const exists = this.shapes.some((s) => s.id === data.shape.id);
       if (!exists) {
         this.shapes.push(data.shape);
@@ -122,7 +125,7 @@ export class Game {
           s.centerY ?? 0,
           s.radius ?? 0,
           0,
-          Math.PI * 2
+          Math.PI * 2,
         );
         this.ctx.stroke();
       } else if (s.type === "ellipse") {
@@ -135,7 +138,7 @@ export class Game {
           ry,
           0, // rotation
           0,
-          Math.PI * 2
+          Math.PI * 2,
         );
         this.ctx.stroke();
       } else if (s.type === "pencil" || s.type === "eraser") {
@@ -149,15 +152,52 @@ export class Game {
           }
           this.ctx.stroke();
         }
-      }
-    }
+      } else if (s.type === "text") {
+        const fontSize = s.fontSize || 20;
+        const x = s.x ?? 0;
+        let yOffset = s.y ?? 0;
+        const maxWidth = 400;
+        const lineHeight = fontSize * 1.2;
 
+        this.ctx.font = `${fontSize}px sans-serif`;
+        this.ctx.fillStyle = "white";
+        this.ctx.textBaseline = "top";
+
+        // 1. handle manual newlines (\n) first
+        const paragraphs = (s.text || "").split("\n");
+
+        paragraphs.forEach((paragraph) => {
+          const words = paragraph.split(" ");
+          let currentLine = "";
+
+          // 2. handle automatic wrapping for long lines
+          for (let n = 0; n < words.length; n++) {
+            const testLine = currentLine + words[n] + " ";
+            const metrics = this.ctx.measureText(testLine);
+
+            if (metrics.width > maxWidth && n > 0) {
+              this.ctx.fillText(currentLine, x, yOffset);
+              currentLine = words[n] + " ";
+              yOffset += lineHeight;
+            } else {
+              currentLine = testLine;
+            }
+          }
+          // draw remainder of paragraph
+          this.ctx.fillText(currentLine, x, yOffset);
+          yOffset += lineHeight;
+        });
+      }
+
+      // console.log("rendering shape:", s);
+    }
     this.ctx.restore();
   }
 
   // --- EVENT HANDLERS ---
 
   private onDown = (e: MouseEvent) => {
+    e.preventDefault();
     const isMiddleClick = e.button === 1;
     if (this.tool === "move" || isMiddleClick || this.spacePressed) {
       this.isPanning = true;
@@ -167,8 +207,14 @@ export class Game {
       return;
     }
 
-    this.drawing = true;
     const { x, y } = this.getPos(e);
+
+    if (this.tool === "text") {
+      this.createTextInput(x, y);
+      return;
+    }
+
+    this.drawing = true;
     this.startX = x;
     this.startY = y;
 
@@ -184,7 +230,7 @@ export class Game {
             type: "delete_shape",
             roomId: this.roomId,
             shapeId: clickedShape.id,
-          })
+          }),
         );
       }
       return;
@@ -225,7 +271,7 @@ export class Game {
       this.ctx.strokeStyle = this.tool === "eraser" ? "black" : "white";
       this.ctx.lineWidth = Math.max(
         this.currentStrokeWidth,
-        1 / this.camera.zoom
+        1 / this.camera.zoom,
       );
 
       if (this.currentPoints.length > 0) {
@@ -257,7 +303,7 @@ export class Game {
     this.ctx.strokeStyle = "rgba(255, 255, 255, 0.5)";
     this.ctx.lineWidth = Math.max(
       this.currentStrokeWidth,
-      1 / this.camera.zoom
+      1 / this.camera.zoom,
     );
 
     if (this.tool === "rect") {
@@ -349,7 +395,7 @@ export class Game {
       this.shapes.push(shape);
       // console.log("shape sending", shape);
       this.socket.send(
-        JSON.stringify({ type: "draw", roomId: this.roomId, shape })
+        JSON.stringify({ type: "draw", roomId: this.roomId, shape }),
       );
       this.redraw();
     }
@@ -394,9 +440,95 @@ export class Game {
       this.canvas.style.cursor = "grab";
     } else if (this.tool === "delete" || this.tool === "eraser") {
       this.canvas.style.cursor = "crosshair";
+    } else if (this.tool === "text") {
+      this.canvas.style.cursor = "text";
     } else {
       this.canvas.style.cursor = "default";
     }
+  }
+
+  private createTextInput(x: number, y: number) {
+    if (this.textInput) return;
+
+    const div = document.createElement("div");
+    div.contentEditable = "true";
+    this.textInput = div;
+
+    // fixed width for automatic wrapping in the UI
+    const maxWidth = 400;
+
+    div.style.position = "absolute";
+    div.style.background = "transparent";
+    div.style.color = "white";
+    div.style.border = "1px white";
+    div.style.outline = "none";
+    div.style.font = `${this.currentFontSize}px sans-serif`;
+    div.style.whiteSpace = "pre-wrap";
+    div.style.wordBreak = "break-word";
+    div.style.width = `${maxWidth}px`; // Match the wrapping width
+
+    const rect = this.canvas.getBoundingClientRect();
+    const screenX = rect.left + this.camera.x + x * this.camera.zoom;
+    const screenY = rect.top + this.camera.y + y * this.camera.zoom;
+
+    div.style.left = `${screenX}px`;
+    div.style.top = `${screenY}px`;
+    div.style.fontSize = `${this.currentFontSize * this.camera.zoom}px`;
+
+    document.body.appendChild(div);
+    div.focus();
+
+    let lastEnterTime = 0;
+
+    const finish = () => {
+      if (!this.textInput) return;
+      const value = div.innerText;
+
+      if (value.trim().length > 0) {
+        const shape: Shape = {
+          id: crypto.randomUUID(),
+          type: "text",
+          x,
+          y,
+          text: value,
+          fontSize: this.currentFontSize,
+        };
+        this.shapes.push(shape);
+        this.socket.send(
+          JSON.stringify({ type: "draw", roomId: this.roomId, shape }),
+        );
+      }
+
+      if (div.parentNode) div.parentNode.removeChild(div);
+      this.textInput = null;
+      this.redraw();
+    };
+
+    setTimeout(() => div.addEventListener("blur", finish), 0);
+
+    div.addEventListener("keydown", (e) => {
+      // handle escape key
+      if (e.key === "Escape") {
+        e.preventDefault();
+        // stop the blur listener so it doesn't trigger 'finish' twice
+        div.removeEventListener("blur", finish);
+
+        // save the text before the element is destroyed
+        finish();
+        return;
+      }
+
+      // handle double enter
+      if (e.key === "Enter") {
+        const currentTime = new Date().getTime();
+        if (currentTime - lastEnterTime < 300) {
+          e.preventDefault();
+          div.removeEventListener("blur", finish);
+          finish();
+        }
+        lastEnterTime = currentTime;
+      }
+    });
   }
 
   private bindMouse() {
