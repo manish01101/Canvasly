@@ -99,9 +99,11 @@ app.post("/verify-otp", async (req, res) => {
       },
     });
 
-    const token = jwt.sign({ userId: user.id, email: user.email }, JWT_SECRET, {
-      expiresIn: "5d",
-    });
+    const token = jwt.sign(
+      { userId: user.id, email: user.email, name: user.name },
+      JWT_SECRET,
+      { expiresIn: "5d" },
+    );
 
     return res.json({ token, name: user.name });
   } catch (error) {
@@ -132,9 +134,11 @@ app.post("/signin", async (req, res) => {
     if (!user.isVerified) {
       return res.status(403).json({ message: "Email not verified" });
     }
-    const token = jwt.sign({ userId: user.id, email: user.email }, JWT_SECRET, {
-      expiresIn: "5d",
-    });
+    const token = jwt.sign(
+      { userId: user.id, email: user.email, name: user.name },
+      JWT_SECRET,
+      { expiresIn: "5d" },
+    );
     return res.json({ token, name: user.name });
   } catch (error) {
     console.error("Signin error:", error);
@@ -183,8 +187,13 @@ app.get("/chats/:roomId", middleware, async (req, res) => {
         id: "desc",
       },
       take: 50,
+      include: {
+        user: {
+          select: { name: true },
+        },
+      },
     });
-    res.json({ chats });
+    res.json({ chats: chats.reverse() });
   } catch (error) {
     console.error("Error while fetching room's chats:", error);
     return res.status(500).json({ message: "Internal server error" });

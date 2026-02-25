@@ -55,12 +55,15 @@ interface User {
   ws: WebSocket;
   rooms: Set<string>;
   userId: string;
+  name: string;
 }
 const users = new Map<WebSocket, User>();
 
 /* ---------------- AUTH ---------------- */
 
-const handleAuth = (request: IncomingMessage): string | null => {
+const handleAuth = (
+  request: IncomingMessage,
+): { userId: string; name: string } | null => {
   let token: string | null = null;
 
   // check header first
@@ -85,7 +88,10 @@ const handleAuth = (request: IncomingMessage): string | null => {
 
   try {
     const decoded = jwt.verify(token, JWT_SECRET) as JwtPayload;
-    return decoded.userId || null;
+    return {
+      userId: decoded.userId,
+      name: decoded.name || "Unknown",
+    };
   } catch (error) {
     console.error("JWT verification failed:", (error as Error).message);
     return null;
@@ -94,26 +100,26 @@ const handleAuth = (request: IncomingMessage): string | null => {
 
 /* ---------------- CONNECTION ---------------- */
 
-wss.on("connection", (ws, request) => {
+wss.on("connection", async (ws, request) => {
   ws.on("error", console.error);
 
-  // find the userId
-  const userId = handleAuth(request);
-  if (!userId) {
+  const userIdentity = handleAuth(request);
+  if (!userIdentity) {
     ws.close(4001, "Invalid or missing token");
     return;
   }
 
   const user: User = {
     ws,
-    userId,
+    userId: userIdentity.userId,
+    name: userIdentity.name,
     rooms: new Set(),
   };
 
   users.set(ws, user);
 
-  console.log(`User connected: ${userId}`);
-  ws.send(JSON.stringify({ type: "welcome", userId }));
+  console.log(`User connected: ${userIdentity.userId} (${userIdentity.name})`);
+  ws.send(JSON.stringify({ type: "welcome", userId: userIdentity.userId }));
 
   /* ---------------- MESSAGE HANDLER ---------------- */
 
@@ -163,12 +169,12 @@ wss.on("connection", (ws, request) => {
       // 1. Save to DB asynchronously (don't block broadcast)
       prisma.chat
         .create({
-          data: { roomId, message, userId },
+          data: { roomId, message, userId: currentUser.userId },
         })
         .catch((e: any) => console.error("Chat DB Error:", e));
 
       console.log(
-        `CHAT from ${currentUser.userId} to room ${roomId}: ${parsedData.message}`
+        `CHAT from ${currentUser.userId} to room ${roomId}: ${parsedData.message}`,
       );
 
       // 2. then broadcast immediately
@@ -180,8 +186,9 @@ wss.on("connection", (ws, request) => {
               type: "chat",
               message: message,
               from: currentUser.userId,
+              fromName: currentUser.name,
               roomId,
-            })
+            }),
           );
         }
       });
@@ -209,9 +216,9 @@ wss.on("connection", (ws, request) => {
             JSON.stringify({
               type: "draw",
               shape,
-              from: userId,
+              from: currentUser.userId,
               roomId,
-            })
+            }),
           );
         }
       });
@@ -221,7 +228,7 @@ wss.on("connection", (ws, request) => {
           data: {
             id: shape.id,
             roomId,
-            userId,
+            userId: currentUser.userId,
             type: shape.type,
             data: shape,
           },
@@ -261,7 +268,7 @@ wss.on("connection", (ws, request) => {
               type: "delete_shape",
               shapeId: shapeId,
               roomId: roomId,
-            })
+            }),
           );
         }
       });
@@ -271,7 +278,7 @@ wss.on("connection", (ws, request) => {
   // if user close the connection
   ws.on("close", () => {
     users.delete(ws);
-    console.log(`User ${userId} disconnected.`);
+    console.log(`User ${userIdentity.userId} disconnected.`);
     console.log(`Total active users remaining: ${users.size}`);
   });
 });

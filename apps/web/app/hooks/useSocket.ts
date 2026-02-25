@@ -1,15 +1,18 @@
 import { useEffect, useState } from "react";
 import { WEBSOCKET_URL } from "../config";
+import { useRouter } from "next/navigation";
 
 const useSocket = () => {
   const [socket, setSocket] = useState<WebSocket | null>(null);
   const [loading, setLoading] = useState(true);
+  const router = useRouter();
 
   useEffect(() => {
     const token = localStorage.getItem("token");
     // If no token, we cannot connect.
     // Ideally redirect to login here or handle in UI.
     if (!token) {
+      router.replace("/signin");
       setLoading(false);
       return;
     }
