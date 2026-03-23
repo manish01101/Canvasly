@@ -82,6 +82,7 @@ USER expressjs
 
 # Use the local prisma CLI from node_modules to guarantee version consistency
 ENV PATH="/app/node_modules/.bin:$PATH"
+ENV NODE_ENV=production
 ENV PORT=8080
 EXPOSE 8080
 

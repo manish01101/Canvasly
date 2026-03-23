@@ -15,5 +15,3 @@ coverage
 
 # Environment files
 .env
-Dockerfile
-.dockerignore

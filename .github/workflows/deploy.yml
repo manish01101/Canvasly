@@ -1,0 +1,98 @@
+name: "Production Deployment: Monorepo Backends"
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  # --- JOB 1: DATABASE MIGRATION ---
+  # This ensures your DB is ready before the new code starts running.
+  database-migration:
+    name: "Apply Database Migrations"
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Checkout Source Code"
+        uses: actions/checkout@v4
+
+      # 1. Setup pnpm first to avoid the "Unable to locate executable" error
+      - name: "Install pnpm"
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.27.0
+
+      # 2. Setup Node with pnpm caching enabled
+      - name: "Setup Node.js"
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: "Install Database Dependencies"
+        run: pnpm install --filter @repo/db...
+
+      - name: "Run Prisma Migration"
+        run: |
+          pnpm turbo run db:generate --filter=@repo/db
+          pnpm turbo run db:deploy --filter=@repo/db
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+  # --- JOB 2: BUILD, PUSH, AND DEPLOY ---
+  # This job runs twice in parallel (once for HTTP, once for WS)
+  build-and-deploy:
+    name: "Deploy: ${{ matrix.app }}"
+    needs: database-migration
+    runs-on: ubuntu-latest
+    strategy:
+      # Matrix setup uses the NAME of the secret as a string
+      matrix:
+        include:
+          - app: http-backend
+            dockerfile: ./apps/http-backend/Dockerfile
+            repo_secret_name: DOCKERHUB_HTTP_REPO 
+            hook: RENDER_HTTP_HOOK
+          - app: ws-backend
+            dockerfile: ./apps/ws-backend/Dockerfile
+            repo_secret_name: DOCKERHUB_WS_REPO
+            hook: RENDER_WS_HOOK
+
+    steps:
+      - name: "Checkout Source Code"
+        uses: actions/checkout@v4
+
+      # Required for advanced caching (type=gha)
+      - name: "Set up Docker Buildx"
+        uses: docker/setup-buildx-action@v3
+        with:
+          driver: docker-container
+
+      - name: "Log in to Docker Hub"
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: "Build and Push Docker Image"
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ${{ matrix.dockerfile }}
+          push: true
+          # Dynamically resolves the repository name from your secrets
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/${{ secrets[matrix.repo_secret_name] }}:latest
+          build-args: |
+            DATABASE_URL=${{ secrets.DATABASE_URL }}
+          # Speeds up future builds by caching layers in GitHub Actions
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: "Trigger Render Web Service"
+        run: |
+          HOOK_URL="${{ secrets[matrix.hook] }}"
+          if [ -z "$HOOK_URL" ]; then
+            echo "Error: Render hook secret is empty!"
+            exit 1
+          fi
+          # Uses POST and a timeout to ensure the command doesn't hang
+          curl -s -S -f --connect-timeout 10 --max-time 30 -X POST "$HOOK_URL"

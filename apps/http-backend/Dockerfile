@@ -77,6 +77,7 @@ RUN find ./packages/db/src/generated -name "libquery_engine-*" \
 
 USER expressjs
 ENV PATH="/app/node_modules/.bin:$PATH"
+ENV NODE_ENV=production
 ENV PORT=8000
 EXPOSE 8000
 
