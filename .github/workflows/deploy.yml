@@ -45,12 +45,13 @@ jobs:
     needs: database-migration
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       # Matrix setup uses the NAME of the secret as a string
       matrix:
         include:
           - app: http-backend
             dockerfile: ./apps/http-backend/Dockerfile
-            repo_secret_name: DOCKERHUB_HTTP_REPO 
+            repo_secret_name: DOCKERHUB_HTTP_REPO
             hook: RENDER_HTTP_HOOK
           - app: ws-backend
             dockerfile: ./apps/ws-backend/Dockerfile
