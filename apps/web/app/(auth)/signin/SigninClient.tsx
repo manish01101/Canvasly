@@ -4,22 +4,22 @@ import InputBox from "../../components/InputBox";
 import React, { useEffect, useState } from "react";
 import Button from "../../components/Button";
 import { signIn, getSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
-import { signupSchema } from "@repo/common/types";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { signinSchema } from "@repo/common/types";
 import { z } from "zod";
 
 type FormData = {
-  name: string;
   email: string;
   password: string;
 };
 
-const Signup = () => {
+const SigninClient = () => {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const error = searchParams.get("error");
 
   const [formData, setFormData] = useState<FormData>({
-    name: "",
     email: "",
     password: "",
   });
@@ -28,7 +28,16 @@ const Signup = () => {
   const [loading, setLoading] = useState(false);
   const [serverError, setServerError] = useState("");
 
-  // Auto redirect if already logged in
+  // Handle URL error parameters
+  useEffect(() => {
+    if (error === "CredentialsSignin") {
+      setServerError("Invalid email or password. Please try again.");
+    } else if (error) {
+      setServerError("Sign in failed. Please try again.");
+    }
+  }, [error]);
+
+  // redirect if already logged in
   useEffect(() => {
     const checkSession = async () => {
       const session = await getSession();
@@ -42,7 +51,7 @@ const Signup = () => {
   const handleChange = (field: keyof FormData, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
 
-    const result = signupSchema.safeParse({
+    const result = signinSchema.safeParse({
       ...formData,
       [field]: value,
     });
@@ -61,14 +70,13 @@ const Signup = () => {
     e.preventDefault();
     setServerError("");
 
-    const result = signupSchema.safeParse(formData);
+    const result = signinSchema.safeParse(formData);
 
     if (!result.success) {
       const flattened = z.flattenError(result.error);
       const fieldErrors = flattened.fieldErrors;
 
       setErrors({
-        name: fieldErrors.name?.[0],
         email: fieldErrors.email?.[0],
         password: fieldErrors.password?.[0],
       });
@@ -78,32 +86,25 @@ const Signup = () => {
     try {
       setLoading(true);
 
-      // Create user and send OTP via http-backend
-      const signupRes = await fetch(
-        `${process.env.NEXT_PUBLIC_HTTP_URL}/signup`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(formData),
-        },
-      );
+      const res = await signIn("credentials", {
+        email: formData.email,
+        password: formData.password,
+        redirect: false,
+      });
 
-      if (!signupRes.ok) {
-        const error = await signupRes.json();
-        throw new Error(error.message || "Failed to create user");
+      if (res?.error) {
+        setServerError("Invalid credentials. Please try again.");
+      } else {
+        router.push("/");
       }
-
-      // Redirect to OTP verification page
-      router.push(`/verify-otp?email=${encodeURIComponent(formData.email)}`);
     } catch (err: any) {
-      setServerError(err?.message || "Signup failed. Please try again.");
+      setServerError("Signin failed. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
   const isFormValid =
-    formData.name &&
     formData.email &&
     formData.password &&
     Object.values(errors).every((err) => !err);
@@ -112,14 +113,14 @@ const Signup = () => {
     <div className="min-h-[calc(100vh-64px)] flex items-center justify-center bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-secondary)] px-6">
       <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl p-10">
         <h1 className="text-3xl font-bold text-center mb-2 text-[var(--color-primary)]">
-          Create your account
+          Welcome back
         </h1>
 
         <p className="text-center text-gray-500 mb-8">
-          Start collaborating in seconds!
+          Sign in to continue collaborating!
         </p>
 
-        {/* Google Sign Up Button */}
+        {/* Google Sign In Button */}
         <button
           onClick={() => signIn("google", { callbackUrl: "/" })}
           className="w-full flex items-center justify-center gap-3 bg-white border border-gray-300 rounded-lg px-4 py-3 text-gray-700 font-medium hover:bg-gray-50 transition-colors mb-6"
@@ -151,7 +152,7 @@ const Signup = () => {
           </div>
           <div className="relative flex justify-center text-sm">
             <span className="px-2 bg-white text-gray-500">
-              Or create an account
+              Or continue with email
             </span>
           </div>
         </div>
@@ -159,21 +160,9 @@ const Signup = () => {
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>
             <InputBox
-              label="Name"
-              type="text"
-              placeholder="John Doe"
-              onChange={(value) => handleChange("name", value)}
-            />
-            {errors.name && (
-              <p className="text-red-500 text-xs mt-1">{errors.name}</p>
-            )}
-          </div>
-
-          <div>
-            <InputBox
               label="Email"
               type="email"
-              placeholder="you@example.com"
+              placeholder="example@email.com"
               onChange={(value) => handleChange("email", value)}
             />
             {errors.email && (
@@ -201,19 +190,19 @@ const Signup = () => {
 
           <Button
             type="primary"
-            label={loading ? "Creating Account..." : "Sign Up"}
+            label={loading ? "Signing In..." : "Sign In"}
             disabled={!isFormValid || loading}
             className="w-full py-3"
           />
         </form>
 
         <div className="mt-6 text-center text-sm text-gray-500">
-          Already have an account?{" "}
+          Don&apos;t have an account?{" "}
           <Link
-            href="/signin"
+            href="/signup"
             className="text-[var(--color-secondary)] font-semibold hover:underline"
           >
-            Sign in
+            Sign up
           </Link>
         </div>
       </div>
@@ -221,4 +210,4 @@ const Signup = () => {
   );
 };
 
-export default Signup;
+export default SigninClient;

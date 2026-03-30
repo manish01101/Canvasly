@@ -4,18 +4,20 @@ interface Props {
   label: string;
   type: string;
   placeholder: string;
-  onchange: (event: React.ChangeEvent<HTMLInputElement>) => void;
-  onkeydown?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
+  onChange: (value: string) => void;
+  onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
   value?: string;
+  maxLength?: number;
 }
 
 const InputBox = ({
   label,
   type,
   placeholder,
-  onchange,
-  onkeydown,
+  onChange,
+  onKeyDown,
   value,
+  maxLength,
 }: Props) => {
   return (
     <div className="flex flex-col ">
@@ -24,9 +26,10 @@ const InputBox = ({
         type={type}
         placeholder={placeholder}
         className="border rounded py-2 px-4 bg-white"
-        onChange={onchange}
-        onKeyDown={onkeydown}
+        onChange={(e) => onChange(e.target.value)}
+        onKeyDown={onKeyDown}
         value={value}
+        maxLength={maxLength}
       />
     </div>
   );

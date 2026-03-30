@@ -13,6 +13,15 @@ export class LocalStorageSyncAdapter implements ISyncAdapter {
 
   private flush() {
     if (!this.getShapes) return;
+
+    // Check if we're in a browser environment
+    if (typeof window === "undefined" || !window.localStorage) {
+      console.warn(
+        "[LocalStorageSyncAdapter] localStorage not available, skipping save",
+      );
+      return;
+    }
+
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(this.getShapes()));
     } catch (err) {
@@ -21,6 +30,14 @@ export class LocalStorageSyncAdapter implements ISyncAdapter {
   }
 
   load(): Shape[] {
+    // Check if we're in a browser environment
+    if (typeof window === "undefined" || !window.localStorage) {
+      console.warn(
+        "[LocalStorageSyncAdapter] localStorage not available, returning empty array",
+      );
+      return [];
+    }
+
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       return raw ? JSON.parse(raw) : [];

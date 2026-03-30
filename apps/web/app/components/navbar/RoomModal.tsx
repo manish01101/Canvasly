@@ -41,8 +41,8 @@ export function RoomModal({
               type="text"
               placeholder="Enter room name..."
               value={roomName}
-              onchange={(e) => onRoomNameChange(e.target.value)}
-              onkeydown={(e) => e.key === "Enter" && onSubmit()}
+              onChange={onRoomNameChange}
+              onKeyDown={(e) => e.key === "Enter" && onSubmit()}
             />
             {error && <p className="text-red-500 text-sm">{error}</p>}
             <div className="flex justify-end gap-3 mt-2">

@@ -1,7 +1,14 @@
 {
   "$schema": "https://turborepo.com/schema.json",
   "ui": "tui",
-  "globalEnv": ["DATABASE_URL"],
+  "globalEnv": [
+    "DATABASE_URL",
+    "PORT",
+    "NEXTAUTH_URL",
+    "NEXTAUTH_SECRET",
+    "GOOGLE_CLIENT_ID",
+    "GOOGLE_CLIENT_SECRET"
+  ],
   "tasks": {
     "build": {
       "dependsOn": ["^build", "^db:generate"],
@@ -21,7 +28,8 @@
       "persistent": true
     },
     "db:generate": {
-      "cache": false
+      "cache": false,
+      "env": ["DATABASE_URL"]
     },
     "db:migrate": {
       "cache": false,

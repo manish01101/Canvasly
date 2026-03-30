@@ -1,14 +1,16 @@
+"use client";
+
 import React, { Suspense } from "react";
-import SigninClient from "./SigninClient";
+import VerifyOTPClient from "./VerifyOTPClient";
 
 export const dynamic = "force-dynamic";
 
-const SigninPage = () => {
+const VerifyOTP = () => {
   return (
     <Suspense fallback={<div>Loading...</div>}>
-      <SigninClient />
+      <VerifyOTPClient />
     </Suspense>
   );
 };
 
-export default SigninPage;
+export default VerifyOTP;

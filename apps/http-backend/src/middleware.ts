@@ -4,6 +4,7 @@ import { JWT_SECRET } from "@repo/backend-common/config";
 
 export const middleware = (req: Request, res: Response, next: NextFunction) => {
   const authHeader = req.headers["authorization"];
+
   if (!authHeader) {
     return res.status(401).json({ message: "Authorization header missing" });
   }
@@ -12,9 +13,20 @@ export const middleware = (req: Request, res: Response, next: NextFunction) => {
   if (!token) {
     return res.status(401).json({ message: "Token missing" });
   }
+
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as { userId: string };
-    req.userId = decoded.userId;
+    // Try to verify as NextAuth JWT first
+    const decoded = jwt.verify(token, JWT_SECRET) as any;
+
+    // NextAuth JWT has 'id' field, custom JWT has 'userId'
+    if (decoded.id) {
+      req.userId = decoded.id;
+    } else if (decoded.userId) {
+      req.userId = decoded.userId;
+    } else {
+      return res.status(403).json({ message: "Invalid token structure" });
+    }
+
     next();
   } catch (error) {
     return res.status(403).json({ message: "Invalid token" });

@@ -12,7 +12,7 @@ import { useRoomActions } from "../hooks/useRoomActions";
 
 export default function NavBar() {
   const router = useRouter();
-  const { token, name, logout } = useAuth();
+  const { isAuthenticated, name, logout, isLoading } = useAuth();
   const {
     roomName,
     setRoomName,
@@ -21,7 +21,7 @@ export default function NavBar() {
     clearErrors,
     createRoom,
     joinRoom,
-  } = useRoomActions(token, router);
+  } = useRoomActions(isAuthenticated ? "authenticated" : "", router);
 
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isJoinOpen, setIsJoinOpen] = useState(false);
@@ -79,7 +79,7 @@ export default function NavBar() {
             </button>
 
             <div className="ml-4 border-l border-white/20 pl-6">
-              {token ? (
+              {isAuthenticated ? (
                 <UserMenu name={name} onLogout={handleLogout} />
               ) : (
                 <div className="flex items-center gap-4">
@@ -111,7 +111,7 @@ export default function NavBar() {
 
         <MobileMenu
           isOpen={isMobileOpen}
-          token={token}
+          token={isAuthenticated ? "authenticated" : ""}
           name={name}
           onCreateRoom={() => {
             openCreate();
@@ -128,7 +128,7 @@ export default function NavBar() {
       <RoomModal
         isOpen={isCreateOpen}
         title="Create a New Room"
-        token={token}
+        token={isAuthenticated ? "authenticated" : ""}
         roomName={roomName}
         error={createError}
         onClose={() => setIsCreateOpen(false)}
@@ -139,7 +139,7 @@ export default function NavBar() {
       <RoomModal
         isOpen={isJoinOpen}
         title="Join Existing Room"
-        token={token}
+        token={isAuthenticated ? "authenticated" : ""}
         roomName={roomName}
         error={joinError}
         onClose={() => setIsJoinOpen(false)}
