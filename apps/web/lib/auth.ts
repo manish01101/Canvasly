@@ -49,6 +49,8 @@ export const authOptions: NextAuthOptions = {
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+      // This allows Google to link to an existing email record
+      allowDangerousEmailAccountLinking: true,
     }),
   ],
   pages: {
