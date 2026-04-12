@@ -4,7 +4,7 @@ import InputBox from "../../components/InputBox";
 import React, { useEffect, useState } from "react";
 import Button from "../../components/Button";
 import { signIn, getSession } from "next-auth/react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { signinSchema } from "@repo/common/types";
 import { z } from "zod";
@@ -16,8 +16,6 @@ type FormData = {
 
 const SigninClient = () => {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const error = searchParams.get("error");
 
   const [formData, setFormData] = useState<FormData>({
     email: "",
@@ -28,16 +26,7 @@ const SigninClient = () => {
   const [loading, setLoading] = useState(false);
   const [serverError, setServerError] = useState("");
 
-  // Handle URL error parameters
-  useEffect(() => {
-    if (error === "CredentialsSignin") {
-      setServerError("Invalid email or password. Please try again.");
-    } else if (error) {
-      setServerError("Sign in failed. Please try again.");
-    }
-  }, [error]);
-
-  // redirect if already logged in
+  // Redirect if already logged in
   useEffect(() => {
     const checkSession = async () => {
       const session = await getSession();
@@ -93,12 +82,12 @@ const SigninClient = () => {
       });
 
       if (res?.error) {
-        setServerError("Invalid credentials. Please try again.");
-      } else {
+        setServerError("Invalid email or password. Please try again.");
+      } else if (res?.ok) {
         router.push("/");
       }
     } catch (err: any) {
-      setServerError("Signin failed. Please try again.");
+      setServerError("Sign in failed. Please try again.");
     } finally {
       setLoading(false);
     }
