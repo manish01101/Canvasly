@@ -19,10 +19,13 @@ const InputBox = ({
   value,
   maxLength,
 }: Props) => {
+  const inputId = label.toLowerCase().replace(/\s+/g, "-");
+
   return (
-    <div className="flex flex-col ">
-      <label htmlFor={label}>{label}</label>
+    <div className="flex flex-col">
+      <label htmlFor={inputId}>{label}</label>
       <input
+        id={inputId}
         type={type}
         placeholder={placeholder}
         className="border rounded py-2 px-4 bg-white"
