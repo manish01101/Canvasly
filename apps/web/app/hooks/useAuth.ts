@@ -1,18 +1,13 @@
-import { useSession, signOut } from "next-auth/react";
+import { signOut, useSession } from "next-auth/react";
 
 export function useAuth() {
   const { data: session, status } = useSession();
 
-  const logout = () => {
-    signOut({ callbackUrl: "/" });
-  };
-
   return {
-    token: session?.user ? "authenticated" : "",
-    name: session?.user?.name || "",
-    user: session?.user,
+    isAuthenticated: status === "authenticated",
+    token: session?.accessToken || null,
+    name: session?.user?.name || "User",
     isLoading: status === "loading",
-    isAuthenticated: !!session?.user,
-    logout,
+    logout: () => signOut({ callbackUrl: "/" }),
   };
 }

@@ -12,7 +12,7 @@ import { useRoomActions } from "../hooks/useRoomActions";
 
 export default function NavBar() {
   const router = useRouter();
-  const { isAuthenticated, name, logout, isLoading } = useAuth();
+  const { isAuthenticated, token, name, logout } = useAuth();
   const {
     roomName,
     setRoomName,
@@ -21,7 +21,7 @@ export default function NavBar() {
     clearErrors,
     createRoom,
     joinRoom,
-  } = useRoomActions(isAuthenticated ? "authenticated" : "", router);
+  } = useRoomActions(token || "", router);
 
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isJoinOpen, setIsJoinOpen] = useState(false);
@@ -128,7 +128,7 @@ export default function NavBar() {
       <RoomModal
         isOpen={isCreateOpen}
         title="Create a New Room"
-        token={isAuthenticated ? "authenticated" : ""}
+        token={token || ""}
         roomName={roomName}
         error={createError}
         onClose={() => setIsCreateOpen(false)}
@@ -139,7 +139,7 @@ export default function NavBar() {
       <RoomModal
         isOpen={isJoinOpen}
         title="Join Existing Room"
-        token={isAuthenticated ? "authenticated" : ""}
+        token={token || ""}
         roomName={roomName}
         error={joinError}
         onClose={() => setIsJoinOpen(false)}

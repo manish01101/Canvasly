@@ -1,11 +1,11 @@
 import express from "express";
 import jwt from "jsonwebtoken";
-import { JWT_SECRET } from "@repo/backend-common/config";
+import "dotenv/config";
+import { getJwtSecret } from "@repo/backend-common/config";
 import { roomSchema, signinSchema, signupSchema } from "@repo/common/types";
 import { prisma } from "@repo/db";
 import { middleware } from "./middleware.js";
 import cors from "cors";
-import "dotenv/config";
 import bcrypt from "bcrypt";
 import { generateOTP } from "./utils/generateOTP.js";
 import { sendOTP } from "./utils/sendOTP.js";
@@ -14,6 +14,7 @@ const PORT = Number(process.env.PORT) || 8000;
 // console.log(PORT);
 
 const app = express();
+const secret = getJwtSecret();
 
 app.use(
   cors({
@@ -101,7 +102,7 @@ app.post("/verify-otp", async (req, res) => {
 
     const token = jwt.sign(
       { userId: user.id, email: user.email, name: user.name },
-      JWT_SECRET,
+      secret,
       { expiresIn: "5d" },
     );
 
@@ -136,7 +137,7 @@ app.post("/signin", async (req, res) => {
     }
     const token = jwt.sign(
       { userId: user.id, email: user.email, name: user.name },
-      JWT_SECRET,
+      secret,
       { expiresIn: "5d" },
     );
     return res.json({ token, name: user.name });

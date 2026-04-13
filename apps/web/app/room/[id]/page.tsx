@@ -8,44 +8,64 @@ import { ChatSidebar } from "../../components/ChatSidebar";
 import { useRoomData } from "../../hooks/useRoomData";
 import { useChatSocket } from "../../hooks/useChatSocket";
 import useSocket from "../../hooks/useSocket";
+import { useAuth } from "../../hooks/useAuth";
 
 const MemoizedRoomCanvas = React.memo(RoomCanvas);
 
 export default function RoomPage() {
-  const { socket, loading } = useSocket();
+  const {
+    isAuthenticated,
+    token,
+    name: currentUserName,
+    isLoading: authLoading,
+  } = useAuth();
+  const { socket, loading: socketLoading } = useSocket(token);
+
   const params = useParams();
   const router = useRouter();
   const roomId = params.id as string;
 
   const [isChatOpen, setIsChatOpen] = useState(false);
-  const [currentUserName, setCurrentUserName] = useState("");
   const [timeoutError, setTimeoutError] = useState(false);
 
-  const { chats, setChats, initialShapes } = useRoomData(roomId);
+  const { chats, setChats, initialShapes } = useRoomData(roomId, token);
 
   useChatSocket(socket, roomId, (chat) => {
     setChats((prev) => [...prev, chat]);
   });
 
+  // Timeout — only trigger if socket never connected after 5s
   useEffect(() => {
-    setCurrentUserName(localStorage.getItem("name") || "");
-  }, []);
-
-  // Timeout — only trigger if socket never connected after 10s
-  useEffect(() => {
-    if (!loading) return;
+    if (!socketLoading) return;
     if (socket) return;
-    const timer = setTimeout(() => setTimeoutError(true), 5000);
+    const timer = setTimeout(() => {
+      if (!socket) setTimeoutError(true);
+    }, 5000);
     return () => clearTimeout(timer);
-  }, [loading, socket]);
+  }, [socketLoading, socket]);
 
   const sendMessage = (message: string) => {
     if (!socket) return;
     socket.send(JSON.stringify({ type: "chat", roomId, message }));
   };
 
-  // Canvas is ready only when BOTH socket is open AND shapes are loaded
-  const isCanvasReady = !loading && !!socket && initialShapes !== null;
+  // Canvas is ready only when auth is done, socket is open, AND shapes are loaded
+  const isCanvasReady = !socketLoading && !!socket && initialShapes !== null;
+
+  // Redirect if not authenticated
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) {
+      router.push("/signin");
+    }
+  }, [isAuthenticated, authLoading, router]);
+
+  if (authLoading) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-black text-white">
+        Verifying Session...
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-screen w-screen bg-black text-white overflow-hidden relative">
@@ -82,7 +102,7 @@ export default function RoomPage() {
           />
         ) : timeoutError ? (
           <div className="h-full flex flex-col items-center justify-center text-red-400 gap-4">
-            <p>Connection timed out.</p>
+            <p>Connection timed out or Invalid Token.</p>
             <button
               onClick={() => window.location.reload()}
               className="px-4 py-2 bg-white text-black rounded"

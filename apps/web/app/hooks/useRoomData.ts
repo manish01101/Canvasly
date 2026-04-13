@@ -10,16 +10,14 @@ interface Chat {
   user: { name: string };
 }
 
-export function useRoomData(roomId: string) {
+export function useRoomData(roomId: string, token: string | null) {
   const router = useRouter();
   const [chats, setChats] = useState<Chat[]>([]);
   const [initialShapes, setInitialShapes] = useState<Shape[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
-
-    if (!token) {
+    if (!token || !roomId) {
       router.replace("/signin");
       return;
     }

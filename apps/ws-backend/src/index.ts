@@ -1,6 +1,6 @@
 import { WebSocketServer, WebSocket } from "ws";
 import jwt, { JwtPayload } from "jsonwebtoken";
-import { JWT_SECRET } from "@repo/backend-common/config";
+import { getJwtSecret } from "@repo/backend-common/config";
 import { DeleteShapeSchema, CreateShapeSchema } from "@repo/common/types";
 import { IncomingMessage } from "http";
 import { prisma } from "@repo/db";
@@ -8,7 +8,7 @@ import http from "http";
 import "dotenv/config";
 
 const PORT = process.env.PORT || 8080;
-
+const secret = getJwtSecret()
 /* ---------------- SERVER CREATION ---------------- */
 const server = http.createServer((req, res) => {
   if (req.method === "GET" && req.url === "/health") {
@@ -64,36 +64,23 @@ const users = new Map<WebSocket, User>();
 const handleAuth = (
   request: IncomingMessage,
 ): { userId: string; name: string } | null => {
-  let token: string | null = null;
+  const url = new URL(request.url || "", `http://${request.headers.host}`);
+  const token =
+    url.searchParams.get("token") ||
+    request.headers.authorization?.split(" ")[1];
 
-  // check header first
-  const authHeader = request.headers.authorization;
-  if (authHeader && authHeader.startsWith("Bearer ")) {
-    token = authHeader.split(" ")[1] || "";
-  }
-
-  // if not header fallback to query params
-  if (!token && request.url) {
-    const urlParts = request.url.split("?");
-    if (urlParts.length > 1) {
-      const queryParams = new URLSearchParams(urlParts[1]);
-      token = queryParams.get("token");
-    }
-  }
-
-  if (!token) {
-    console.error("Connection attempt failed: No JWT token provided.");
-    return null;
-  }
+  if (!token) return null;
 
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as JwtPayload;
+    const decoded = jwt.verify(token, secret!, {
+      algorithms: ["HS256"],
+    }) as any;
     return {
       userId: decoded.userId,
       name: decoded.name || "Unknown",
     };
-  } catch (error) {
-    console.error("JWT verification failed:", (error as Error).message);
+  } catch (error: any) {
+    console.error("WS Auth Error:", error.message);
     return null;
   }
 };

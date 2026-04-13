@@ -14,10 +14,10 @@
   "packageManager": "pnpm@10.19.0",
   "dependencies": {
     "@repo/typescript-config": "workspace:*",
-    "@types/node": "^22.18.12",
     "dotenv": "^17.2.3"
   },
   "devDependencies": {
+    "@types/node": "^22.19.3",
     "typescript": "^5.5.3"
   },
   "exports": {
